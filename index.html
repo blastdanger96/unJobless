@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>Mockmate - AI Interview Practice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>MockMate - AI Interview Practice</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css">
     <script src="./script.js" defer></script>
@@ -11,45 +11,72 @@
 
 <body>
 
+    <!-- HEADER -->
     <div class="header">
         <h1>MOCKMATE</h1>
-        <p>//AI Powered Interview practice//</p>
+        <p>// AI Powered Interview Practice //</p>
     </div>
 
+    <!-- STEP 1: CHOOSE ROLE -->
     <div class="box">
-        <div class="box-label">STEP 1 - CHOOSE YOUR ROLE</div>
-            <button class="role-btn" onclick="selectROLE(this, 'Software Engineer')"
-                Software Engineer & Computer Scientist
-                <span>DSA, system design,coding</span>
+        <div class="box-label">STEP 1 — CHOOSE YOUR ROLE</div>
+        <div class="role-grid">
+
+            <button class="role-btn" onclick="selectRole(this, 'Software Engineer')">
+                💻 Software Engineer
+                <span>DSA, system design, coding</span>
             </button>
-            <button class="role-btn" onclick="selectROLE(this, 'Consultant')"
-                Manager & Consultant
-                <span>Strategies, metrics, cases</span>
+
+            <button class="role-btn" onclick="selectRole(this, 'Consultant')">
+                📋 Manager & Consultant
+                <span>Strategy, metrics, cases</span>
             </button>
-            <button class="role-btn" onclick="selectROLE(this, 'Data Analyst')"
-                Data Analyst
-                <span>SQL, statistics, cases structure</span>
+
+            <button class="role-btn" onclick="selectRole(this, 'Data Analyst')">
+                📊 Data Analyst
+                <span>SQL, statistics, case structure</span>
             </button>
-            <button class="role-btn" onclick="selectROLE(this, 'UI Designer')"
-                UX and UI designer
+
+            <button class="role-btn" onclick="selectRole(this, 'UI Designer')">
+                🎨 UX & UI Designer
                 <span>Design thinking, critique</span>
             </button>
-           
+
+        </div>
     </div>
 
-<div class="box">
-    <div class="box-label"> STEP 2 - ANSWER THE QUESTIONS WHICH ARE MOST ASKED IN INTERVIEWS</div>
-    <div class="dialog-text" id=""question-display">
-    -> Select a role above to get your question<span class="cursor">_</span>
+    <!-- STEP 2: QUESTION + ANSWER -->
+    <div class="box">
+        <div class="box-label">STEP 2 — ANSWER THE QUESTION</div>
+        <div class="dialog-text" id="question-display">
+            ▶ Select a role above to get your question<span class="cursor">_</span>
+        </div>
+        <textarea
+            class="question-box"
+            id="user-answer"
+            rows="6"
+            placeholder="Type your answer here...">
+        </textarea>
     </div>
-    <textarea
-    class="question-box"
-    id="user-answer"
-    rows="6"
-    placeholder="Type your answer here...">
-    </textarea>
 
+    <!-- SUBMIT BUTTON -->
+    <button class="start-btn" onclick="submitAnswer()">
+        ▶ SUBMIT ANSWER
+    </button>
 
-</div>
+    <!-- FEEDBACK BOX (hidden until submitted) -->
+    <div class="dialog-box" id="feedback-box">
+        <div class="dialog-speaker">MOCKMATE FEEDBACK</div>
+        <div class="dialog-text" id="feedback-text"></div>
+        <button class="next-btn" onclick="nextQuestion()">▶ NEXT QUESTION</button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer-bar">
+        <span>MOCKMATE v1.0</span>
+        <span>SCORE <span id="score">—</span></span>
+        <span>BUILT FOR HACK CLUB ❤️</span>
+    </div>
+
 </body>
 </html>

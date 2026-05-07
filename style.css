@@ -1,0 +1,165 @@
+* {margin: 0; padding: 0; box-sizing: border-box}
+
+body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 36px;
+    width: 100%;
+    max-width: 680px;
+
+}
+
+.header h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1rem,3vw,1.6rem);
+    letter-spacing: 5px;
+    text-shadow: 4px 4px 0 #333;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: #666;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    margin-bottom: 12px;
+}
+
+.back {
+    color: #444;
+    text-decoration: none;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+}
+.back:hover {color: #fff;}
+
+.box {
+    width: 100%;
+    max-width: 680px;
+    border: 4px solid #fff;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+}
+
+.box-label {
+    font-family: 'Press Start 2P', monospace;
+    font-family: 0.4rem;
+    color: #555;
+    letter-spacing: 3px;
+    margin-bottom: 14px;
+}
+
+#question-display {
+    font-size: 2.2rem;
+    line-height: 1.9;
+    color: #ccc;
+    letter-spacing: 1px;
+}
+
+textarea {
+    width: 100%;
+    background: #0f0f0f;
+    border: 3px solid #fff;
+    color: #fff;
+    font-family: 'VT323', monospace;
+    font-size: 1.15rem;
+    padding: 14px 16px;
+    resize: none;
+    outline: none;
+    letter-spacing: 1px;
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+textarea:placeholder {color: #333;}
+textarea:focus {border-color: #aaa;}
+
+#submit-btn {
+    width: 100%;
+    max-width:600px;
+    border: 4px solid #fff;
+    background: #fff;
+    color: #0a0a0a;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.6rem;
+    padding: 18px;
+    cursor: pointer;
+    letter-spacing: 4px;
+    letter-spacing: 4px;
+    margin-bottom: 18px;
+    transition: background 0.08s, color 0.08s;
+}
+
+#submit-btn:hover {background: #0a0a0a; color: #fff}
+#submit-btn:disabled {background: #222; color:#555; border-color:#333; cursor: not-allowed;}
+
+#feedback-box{
+    width: 100%;
+    max-width: 680px;
+    border: 4px solid #fff;
+    padding: 24px 28px;
+    margin-bottom: 18px;
+}
+
+#feedack-box.hidden {display: none;}
+
+#feedback-text {
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: #ccc;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+
+}
+
+#score-display {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.45rem;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+}
+
+#feedback-box button {
+    border: 3px solid #fff;
+    background: #0a0a0a;
+    color: #fdff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.42rem;
+    padding: 12px 18px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: background 0.08s, color 0.08s;
+}
+
+#feedback-box button:hover {background: #fff; color: #0a0a0a;}
+
+#feedback-text.loading {color:#555; font-style: italic;}
+
+.footer {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    justify-content: space-between;
+    color: #333;
+    font-size: 0.9rem;
+    padding-top: 12px;
+    border-top: 2px solid #1a1a1a;
+    letter-spacing: 2px;
+    margin-top: 8px;
+
+}
+
+.cursor {display: inline-block; animation: blink 1s step-end infinite;}
+@keyframes blink {0%,100%{opacity:1}  50%{opacity:0%}}

@@ -1,1 +1,1 @@
-# Project_dp
+# Project_dp MockMate is an AI-powered mock interview platform designed to help students and job seekers practice for real interviews. Users select a role — Software Engineer, Consultant, Data Analyst, or UX Designer — and receive randomised interview questions tailored to that field. They type their answer, submit it, and receive instant feedback on the quality and depth of their response, along with a running score. MockMate helps you build confidence and get comfortable answering tough questions before the real thing.
