@@ -5,39 +5,123 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>MockMate - AI Interview Practice</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="./styles.css">
-    <script src="./script.js" defer></script>
-</head>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        body {
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: clamp(1.4rem, 5vw, 2.2rem);
+            letter-spacing: 6px;
+            text-shadow: 4px 4px 0 #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            letter-spacing: 3px;
+            margin-bottom: 60px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 680px;
+            border: 4px solid #fff;
+            padding: 28px 32px;
+            margin-bottom: 20px;
+        }
+
+        .box-label {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            color: #555;
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .role-btn {
+            border: 3px solid #fff;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            font-size: 1.15rem;
+            padding: 16px 14px;
+            cursor: pointer;
+            text-align: left;
+            line-height: 1.5;
+            letter-spacing: 1px;
+            transition: background 0.08s, color 0.08s;
+        }
+
+        .role-btn span {
+            display: block;
+            font-size: 0.85rem;
+            color: #555;
+            margin-top: 3px;
+        }
+
+        .role-btn:hover {
+            background: #fff;
+            color: #0a0a0a;
+        }
+
+        .role-btn:hover span { color: #444; }
+
+        .footer {
+            margin-top: 48px;
+            color: #333;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+    </style>
+</head>
 <body>
 
-    <!-- HEADER -->
-    <div class="header">
-        <h1>MOCKMATE</h1>
-        <p>// AI Powered Interview Practice //</p>
-    </div>
+    <h1>MOCKMATE</h1>
+    <p class="subtitle">// AI Powered Interview Practice //</p>
 
-    <!-- STEP 1: CHOOSE ROLE -->
     <div class="box">
-        <div class="box-label">STEP 1 — CHOOSE YOUR ROLE</div>
+        <div class="box-label">CHOOSE YOUR ROLE TO BEGIN</div>
         <div class="role-grid">
 
-            <button class="role-btn" onclick="selectRole(this, 'Software Engineer')">
+            <button class="role-btn" onclick="goTo('Software Engineer')">
                 💻 Software Engineer
                 <span>DSA, system design, coding</span>
             </button>
 
-            <button class="role-btn" onclick="selectRole(this, 'Consultant')">
+            <button class="role-btn" onclick="goTo('Consultant')">
                 📋 Manager & Consultant
                 <span>Strategy, metrics, cases</span>
             </button>
 
-            <button class="role-btn" onclick="selectRole(this, 'Data Analyst')">
+            <button class="role-btn" onclick="goTo('Data Analyst')">
                 📊 Data Analyst
-                <span>SQL, statistics, case structure</span>
+                <span>SQL, statistics, structure</span>
             </button>
 
-            <button class="role-btn" onclick="selectRole(this, 'UI Designer')">
+            <button class="role-btn" onclick="goTo('UI Designer')">
                 🎨 UX & UI Designer
                 <span>Design thinking, critique</span>
             </button>
@@ -45,38 +129,13 @@
         </div>
     </div>
 
-    <!-- STEP 2: QUESTION + ANSWER -->
-    <div class="box">
-        <div class="box-label">STEP 2 — ANSWER THE QUESTION</div>
-        <div class="dialog-text" id="question-display">
-            ▶ Select a role above to get your question<span class="cursor">_</span>
-        </div>
-        <textarea
-            class="question-box"
-            id="user-answer"
-            rows="6"
-            placeholder="Type your answer here...">
-        </textarea>
-    </div>
+    <p class="footer">MOCKMATE v1.0 — NO BS JOB LANDER</p>
 
-    <!-- SUBMIT BUTTON -->
-    <button class="start-btn" onclick="submitAnswer()">
-        ▶ SUBMIT ANSWER
-    </button>
-
-    <!-- FEEDBACK BOX (hidden until submitted) -->
-    <div class="dialog-box" id="feedback-box">
-        <div class="dialog-speaker">MOCKMATE FEEDBACK</div>
-        <div class="dialog-text" id="feedback-text"></div>
-        <button class="next-btn" onclick="nextQuestion()">▶ NEXT QUESTION</button>
-    </div>
-
-    <!-- FOOTER -->
-    <div class="footer-bar">
-        <span>MOCKMATE v1.0</span>
-        <span>SCORE <span id="score">—</span></span>
-        <span>BUILT FOR HACK CLUB ❤️</span>
-    </div>
+    <script>
+        function goTo(role) {
+            window.location.href = 'questions.html?role=' + encodeURIComponent(role);
+        }
+    </script>
 
 </body>
 </html>
