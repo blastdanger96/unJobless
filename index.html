@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>MockMate - AI Interview Practice</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+    <title>unJobless</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -12,7 +12,6 @@
             background: #0a0a0a;
             color: #fff;
             font-family: 'VT323', monospace;
-            font-size: 20px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -23,41 +22,43 @@
 
         h1 {
             font-family: 'Press Start 2P', monospace;
-            font-size: clamp(1.4rem, 5vw, 2.2rem);
-            letter-spacing: 6px;
-            text-shadow: 4px 4px 0 #333;
-            margin-bottom: 10px;
+            font-size: clamp(1.6rem, 5vw, 2.4rem);
+            letter-spacing: 8px;
+            text-shadow: 4px 4px 0 #222;
+            margin-bottom: 12px;
             text-align: center;
+            animation: fadeDown 0.6s ease both;
         }
 
         .subtitle {
-            color: #666;
+            color: #444;
             letter-spacing: 3px;
-            margin-bottom: 60px;
-            font-size: 1rem;
+            margin-bottom: 56px;
+            font-size: 1.1rem;
             text-align: center;
+            animation: fadeDown 0.6s 0.1s ease both;
         }
 
         .box {
             width: 100%;
             max-width: 680px;
             border: 4px solid #fff;
-            padding: 28px 32px;
-            margin-bottom: 20px;
+            padding: 32px;
+            animation: fadeUp 0.5s 0.2s ease both;
         }
 
         .box-label {
             font-family: 'Press Start 2P', monospace;
             font-size: 0.42rem;
-            color: #555;
+            color: #444;
             letter-spacing: 3px;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .role-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
         }
 
         .role-btn {
@@ -65,8 +66,8 @@
             background: #0a0a0a;
             color: #fff;
             font-family: 'VT323', monospace;
-            font-size: 1.15rem;
-            padding: 16px 14px;
+            font-size: 1.2rem;
+            padding: 18px 16px;
             cursor: pointer;
             text-align: left;
             line-height: 1.5;
@@ -76,34 +77,40 @@
 
         .role-btn span {
             display: block;
-            font-size: 0.85rem;
-            color: #555;
-            margin-top: 3px;
+            font-size: 0.9rem;
+            color: #444;
+            margin-top: 4px;
+            transition: color 0.08s;
         }
 
-        .role-btn:hover {
-            background: #fff;
-            color: #0a0a0a;
-        }
-
-        .role-btn:hover span { color: #444; }
+        .role-btn:hover { background: #fff; color: #0a0a0a; }
+        .role-btn:hover span { color: #555; }
 
         .footer {
-            margin-top: 48px;
-            color: #333;
-            font-size: 0.85rem;
+            margin-top: 40px;
+            color: #222;
+            font-size: 0.9rem;
             letter-spacing: 2px;
-            text-align: center;
+            animation: fadeUp 0.5s 0.3s ease both;
+        }
+
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-    <h1>MOCKMATE</h1>
-    <p class="subtitle">// AI Powered Interview Practice //</p>
+    <h1>unJobless</h1>
+    <p class="subtitle">// no bs interview practice plateform //</p>
 
     <div class="box">
-        <div class="box-label">CHOOSE YOUR ROLE TO BEGIN</div>
+        <div class="box-label">SELECT YOUR ROLE TO BEGIN</div>
         <div class="role-grid">
 
             <button class="role-btn" onclick="goTo('Software Engineer')">
@@ -113,12 +120,12 @@
 
             <button class="role-btn" onclick="goTo('Consultant')">
                 📋 Manager & Consultant
-                <span>Strategy, metrics, cases</span>
+                <span>Strategy, frameworks, cases</span>
             </button>
 
             <button class="role-btn" onclick="goTo('Data Analyst')">
                 📊 Data Analyst
-                <span>SQL, statistics, structure</span>
+                <span>SQL, statistics, analysis</span>
             </button>
 
             <button class="role-btn" onclick="goTo('UI Designer')">
@@ -129,7 +136,7 @@
         </div>
     </div>
 
-    <p class="footer">MOCKMATE v1.0 — NO BS JOB LANDER</p>
+    <p class="footer">unJobless v1.0 — NO BS JOB LANDER</p>
 
     <script>
         function goTo(role) {

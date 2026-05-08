@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html lang="eng">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>unJobless - AI Interviewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./questions.css">
+    <script src="./questions.js" defer></script>
+</head>
+
+<body>
+
+    <div class="header">
+        <a href="index.html" class="back"><- CHANGE ROLE</a>
+                <h1 id="role-title">unJobless</h1>
+                <p id="role-subtitle">// INTERVIEW MODE //</p>
+
+    </div>
+
+    <div class="box" id="question-box">
+        <div class="box-label">
+            <span>QUESTION</span>
+            <span id="q-counter">Q1</span>
+        </div>
+        <div id="question-display">
+            LOADING....<span class="cursor">_</span>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="box-label">
+            <span>YOUR ANSWER</span>
+            <span id="word-count-label">0 WORDS</span>
+        </div>
+        <textaea id="user-answer" row="7"
+            placeholder="TYPE YOUR ANSWER HERE. BE SPEFIC BY USING EXAMPLES AND MAKE SURE TO EXPLAIN YOUR REASONING.">
+        </textaea>
+    </div>
+
+    <button id="submit-btn" onclick="submitAnswer()">SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS</button>
+
+    <div id="feedback-box" class="hidden">
+        <div class="box-label">
+            <span>AI FEEDBACK</span>
+            <span id="score-display"></span>
+        </div>
+        <div id="rating-bar">
+            <span id="rating-label"></span>
+
+        </div>
+        <div id="feedback-text"></div>
+        <div id="feedback-breakdown"></div>
+        <button id="next-btn" onclick="nextQuestion()">NEXT QUESTION -></button>
+
+    </div>
+
+    <div class="footer">
+        <span>SCORE: <span id="score">0</span>PTS</span>
+        <span>ANSWERED: <span id="q-count"></span></span>
+        <span>unJobless v1.0</span>
+    </div>
+</body>
+
+</html>
