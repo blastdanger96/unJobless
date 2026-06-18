@@ -436,6 +436,73 @@ def build_breakdown(keyword_hits, keywords,
 
     if has_example:
         lines.append("+ Include a example bru")
+    elif word_count < ideal_length * 0.6:
+        lines.append("- answer is too short, add an example to make it more convincing")
     else:
         lines.append("- touch grass and put sm real ex")
+
+    
+    if has_example:
+        lines.append("gg gng u got a example in there, good job")
+    else:
+        lines.append(" boring ash bru no example, add sm real world example to make it more convincing")
+
+    if structure_hits >= 2:
+        lines.append(" g00d structure markers like (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
+    else:
+        lines.append("yea bru u need to start lockin in, ts aint tuff icl")
+
+    return '\n'.join(lines)
+
+def basic_grade(answer: str) -> tuple:
+    '''Fallback grading if no question metadata is found. Just checks length and presence of examples.'''
+    words = len(answer.split())
+    if words < 30:
+        return( "u are absolutely jobless fam try to yap more and give examples or else u finna be homeless ash", 0, "- answer is too short, add more detail and examples, its not like u gotta go smwhr",
+        0,
+        "ye bru ts is small ash, fam type shi more like rizzin a huzz or sm shi u get me?"
+        )
+    elif words < 80:
+        return (
+            "bro u gotta yap more to get a job, its not like u gotta go smwhr, add more detail and examples or else u finna be homeless ash",
+            1,
+            "had u only gooned less to ur anime wafu and added more detail 🥀"
+        )    
+    elif words < 150:
+        return (
+            "ye no ts fr gng, on ur way to landin on hot base (if u understood this GET TF OFF COD AND STUDY BRU)",
+            2,
+            "+ decent shi ngl, \n meh u sound like u dont need ts like u aint nonchalant dawg"
+        )
+    else:
+        return (
+            "ma goat man u finally locked in on ts and u sound like u know ur shi, gg gng",
+            3,
+            "fah thou shalt not goon thine answer, for it is a sin to goon in an interview, but if thou must goon, make sure to include examples and key terms to show thy knowledge in tho's interview"
+        )
+    
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'running',
+        'ai_enabled': False,
+        'grader': 'rule-based (no external ai calls)',
+        'roles': list(QUESTIONS.keys()),
+        'total_questions': sum(len(v) for v in QUESTIONS.values())
+    })
+
+
+if __name__ == '__main__':
+    print("\n" + "=" * 52)
+    print(" unJ0bless Backend")
+    print("=" * 52)
+    print(" URL -> http://localhost:5000")
+    print("Health -> http://localhost:5000/health")
+    print("Grader -> http://localhost:5000/submit (im sigma enough to not use AI gng)")
+    print(f" Roles -> {', '.join(QUESTIONS.keys())}")
+    print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
+    print("=" * 52 + "\n")
+    app.run(debug=True,  port=5000)
+
+    
            
