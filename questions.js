@@ -2,7 +2,7 @@ let role = null;
 let score = 0;
 let questionsAnswered = 0;
 
-window.addEvenentListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
 
@@ -14,7 +14,7 @@ window.addEvenentListener('DOMContentLoaded', async () => {
     document.getElementById('role-title').textContent =  role.toUpperCase();
     document.getElementById('role-subtitle').textContent = '//' + role + 'Interview //';
 
-    document.getElementById('user-answer').addEvenentListener('input', () => {
+    document.getElementById('user-answer').addEventListener('input', () => {
         const text = document.getElementById('user-answer').value.trim();
         const count = text == '' ? 0 :text.split(/\s+/).length;
         const el = document.getElementById('word-count');
@@ -27,14 +27,14 @@ window.addEvenentListener('DOMContentLoaded', async () => {
 
 async function loadQuestion() {
     try {
-        const res = await fetch('/question?role=${encodeURIComponent(role)}');
+        const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
         if (!res.ok) throw new Error('fah server was voted out gng');
         const data = await res.json();
         document.getElementById('question-display').innerHTML =
             '▶ ' + data.question + '<span class="cursor">_</span>';
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
     } catch (err) {
-        document.getElementById('question-dispay').innerHTML = 
+        document.getElementById('question-display').innerHTML = 
         'ye cant reach testube or flask or smth, fah';
     } 
 }
@@ -48,15 +48,15 @@ async function submitAnswer() {
     }
 
     const btn = document.getElementById('submit-btn');
-    btn.disable = true;
+    btn.disabled = true;
     btn.textContent = '...gradin ts...';
 
     const feedbackBox = document.getElementById('feedback-box');
     const feedbackText = document.getElementById('feedback-text');
-    const breakdownText = document.getElementById('breakdown-text');
+    const breakdownText = document.getElementById('feedback-breakdown');
 
     feedbackBox.className = 'visible';
-    feedbackText.className = 'shush, lemme cook...';
+    feedbackText.className = 'loading';
     feedbackText.textContent = "gradin ts...";
     breakdownText.textContent = '';
     document.getElementById('score-display').textContent = '';
@@ -71,5 +71,37 @@ async function submitAnswer() {
             body: JSON.stringify({role: role, answer: answer})
         });
 
-        }
+        if (!res.ok) throw new Error('gradin ts failed');
+        const data = await res.json();
+
+        feedbackText.className = '';
+        feedbackText.textContent = data.feedback;
+        breakdownText.textContent = data.breakdown;
+        
+        score += data.points;
+        questionsAnswered += 1;
+        
+        document.getElementById('score').textContent = score;
+        document.getElementById('q-count').textContent = questionsAnswered;
+        document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
+
+        document.getElementById('next-btn').style.display = 'block';
+
+    } catch (err) {
+        feedbackText.textContent = 'ye cant reach testube or flask or smth, fah';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS';
+    }
+}
+
+async function nextQuestion() {
+    document.getElementById('user-answer').value = '';
+    document.getElementById('word-count').textContent = '0';
+    document.getElementById('word-count-label').parentElement.className = 'word-count';
+    
+    const feedbackBox = document.getElementById('feedback-box');
+    feedbackBox.className = 'hidden';
+    
+    await loadQuestion();
     
