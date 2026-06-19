@@ -1,5 +1,5 @@
 from curses import meta
-from flask import Flask, Request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 import random
 import os
 import re
@@ -230,7 +230,7 @@ def static_files(filename):
 
 @app.route('/question')
 def get_question():
-    role = Request.args.get('role','').strip()
+    role = request.args.get('role','').strip()
 
     if role not in QUESTIONS:
         return jsonify({'error': f'Unknown role: {role}'}), 400
@@ -245,7 +245,7 @@ def get_question():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    body = Request.get_json()
+    body = request.get_json()
     if not body:
         return jsonify({'error': 'No data received'}), 400
     
@@ -269,7 +269,7 @@ def submit():
 
 def grade(role: str, answer: str, question: str) -> tuple:
     meta = next(
-        {q for q in QUESTIONS.get(role,[]) if q['q'] == question},
+        (q for q in QUESTIONS.get(role,[]) if q['q'] == question),
         None
     )
 
@@ -301,7 +301,7 @@ def grade(role: str, answer: str, question: str) -> tuple:
     concepts_hits = [c for c in concepts if c.lower() in answer_lower]
     concept_score = 0
     if len(concepts)>0:
-        ratio = len(concept_hits)/len(concepts)
+        ratio = len(concepts_hits)/len(concepts)
         if ratio >=0.4:
             concept_score = 2
         elif ratio >=0.2:
@@ -313,15 +313,12 @@ def grade(role: str, answer: str, question: str) -> tuple:
         "on the other hand", "in contrast", "whereas",
         "for instance", "this means", "which means"
     ]
+    structure_hits = sum(1 for m in structure_markers if m in answer_lower)
+    structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
+    
     example_keywords = ["for example", "such as", "e.g.", "like", "in particular"]
     has_example = any(ek in answer_lower for ek in example_keywords)
     example_score = 2 if has_example else 0
-    structure_score = 2 if structure_hits >= 2 else (1 if
-                                                     structure_hits == 1 else 0)
-
-
-    structure_hits = sum(1 for m in structure_markers if m in answer_lower)
-    structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
 
 # Combine scores with weights to get a raw score out of 10
     raw = (
@@ -333,9 +330,9 @@ def grade(role: str, answer: str, question: str) -> tuple:
     )
 # Different thresholds determine final score tier
     if raw >= 1.5:
-        point = 3
+        points = 3
     elif raw >= 1.0:
-        point = 2
+        points = 2
     elif raw >= 0.5:
         points = 1
     else:
@@ -344,13 +341,13 @@ def grade(role: str, answer: str, question: str) -> tuple:
     feedback = build_feeback(
         points, words_count, ideal_length,
         keyword_hits, keywords,
-        concept_hits, concepts,
+        concepts_hits, concepts,
         has_example, structure_hits, meta
     )
 
     breakdown = build_breakdown(
         keyword_hits, keywords,
-        concept_hits, concepts,
+        concepts_hits, concepts,
         has_example, words_count, ideal_length,
         structure_hits
     )
@@ -438,28 +435,13 @@ def basic_grade(answer: str) -> tuple:
     '''Fallback grading if no question metadata is found. Just checks length and presence of examples.'''
     words = len(answer.split())
     if words < 30:
-        return( "u are absolutely jobless fam try to yap more and give examples or else u finna be homeless ash", 0, "- answer is too short, add more detail and examples, its not like u gotta go smwhr",
-        0,
-        "ye bru ts is small ash, fam type shi more like rizzin a huzz or sm shi u get me?"
-        )
+        return ("u are absolutely jobless fam try to yap more and give examples or else u finna be homeless ash", 0, "- answer is too short, add more detail and examples, its not like u gotta go smwhr")
     elif words < 80:
-        return (
-            "bro u gotta yap more to get a job, its not like u gotta go smwhr, add more detail and examples or else u finna be homeless ash",
-            1,
-            "had u only gooned less to ur anime wafu and added more detail 🥀"
-        )    
+        return ("bro u gotta yap more to get a job, its not like u gotta go smwhr, add more detail and examples or else u finna be homeless ash", 1, "had u only gooned less to ur anime wafu and added more detail 🥀")    
     elif words < 150:
-        return (
-            "ye no ts fr gng, on ur way to landin on hot base (if u understood this GET TF OFF COD AND STUDY BRU)",
-            2,
-            "+ decent shi ngl, \n meh u sound like u dont need ts like u aint nonchalant dawg"
-        )
+        return ("ye no ts fr gng, on ur way to landin on hot base (if u understood this GET TF OFF COD AND STUDY BRU)", 2, "+ decent shi ngl, \n meh u sound like u dont need ts like u aint nonchalant dawg")
     else:
-        return (
-            "ma goat man u finally locked in on ts and u sound like u know ur shi, gg gng",
-            3,
-            "fah thou shalt not goon thine answer, for it is a sin to goon in an interview, but if thou must goon, make sure to include examples and key terms to show thy knowledge in tho's interview"
-        )
+        return ("ma goat man u finally locked in on ts and u sound like u know ur shi, gg gng", 3, "fah thou shalt not goon thine answer, for it is a sin to goon in an interview, but if thou must goon, make sure to include examples and key terms to show thy knowledge in tho's interview")
     
 @app.route('/health')
 def health():
@@ -476,13 +458,13 @@ if __name__ == '__main__':
     print("\n" + "=" * 52)
     print(" unJ0bless Backend")
     print("=" * 52)
-    print(" URL -> http://localhost:5000")
-    print("Health -> http://localhost:5000/health")
-    print("Grader -> http://localhost:5000/submit (im sigma enough to not use AI gng)")
+    print(" URL -> http://localhost:8000")
+    print("Health -> http://localhost:8000/health")
+    print("Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
     print(f" Roles -> {', '.join(QUESTIONS.keys())}")
     print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
     print("=" * 52 + "\n")
-    app.run(debug=True,  port=5000)
+    app.run(debug=True,  port=8000)
 
     
            
