@@ -1,3 +1,4 @@
+from curses import meta
 from flask import Flask, Request, jsonify, send_from_directory
 import random
 import os
@@ -229,7 +230,7 @@ def static_files(filename):
 
 @app.route('/question')
 def get_question():
-    role = request.args.get('role','').strip()
+    role = Request.args.get('role','').strip()
 
     if role not in QUESTIONS:
         return jsonify({'error': f'Unknown role: {role}'}), 400
@@ -244,7 +245,7 @@ def get_question():
 
 @app.route('/submit', methods=['POST'])
 def submit():
-    body = request.get_json()
+    body = Request.get_json()
     if not body:
         return jsonify({'error': 'No data received'}), 400
     
@@ -268,9 +269,10 @@ def submit():
 
 def grade(role: str, answer: str, question: str) -> tuple:
     meta = next(
-        (q for q in QUESTIONS.get(role,[]) if q['q'] == question),
+        {q for q in QUESTIONS.get(role,[]) if q['q'] == question},
         None
     )
+
     if not meta:
         return basic_grade(answer)
     
@@ -280,30 +282,29 @@ def grade(role: str, answer: str, question: str) -> tuple:
     ideal_length = meta.get('ideal_length', 80)
 
     length_score = 0
-    if word_count>= ideal_length:
+    if words_count >= ideal_length:
         length_score = 2
-
-    elif words_count>= ideal_length *0.6:
+    elif words_count >= ideal_length * 0.6:
         length_score = 1
-
-    keywords = meta.get('keywords',[])
-    keyowrd_hits = [k for k in keywords if k in answer_lower]
-    keyword_score = 0
-    if len(keywords) > 0:
-        ratio = len(keyword_hits) / len(keywords)
-        if ratio >= 0.5:
-            keyword_score = 2
-        elif ratio >= 0.25:
-            keyword_score = 1
     
-    concepts = meta.get('concepts',[])
-    concept_hits = [c for c in concepts if c in answer_lower]
-    concept_score= 0
-    if leng(concepts) > 0:    
-        ratio = len(concepts_hits)/len(concepts)
+    keywords = meta.get('keywords', [])
+    keyword_hits = [k for k in keywords if k.lower() in answer_lower]
+    keyword_score = 0
+    if len(keywords)>0:
+        ratio = len(keyword_hits)/len(keywords)
+        if ratio >=0.5:
+            keyword_score = 2
+        elif ratio >=0.2:
+            keyword_score = 1
+
+    concepts = meta.get('concepts', [])
+    concepts_hits = [c for c in concepts if c.lower() in answer_lower]
+    concept_score = 0
+    if len(concepts)>0:
+        ratio = len(concept_hits)/len(concepts)
         if ratio >=0.4:
             concept_score = 2
-        elif ratio >= 0.2:
+        elif ratio >=0.2:
             concept_score = 1
 
     structure_markers = [
@@ -312,29 +313,37 @@ def grade(role: str, answer: str, question: str) -> tuple:
         "on the other hand", "in contrast", "whereas",
         "for instance", "this means", "which means"
     ]
+    example_keywords = ["for example", "such as", "e.g.", "like", "in particular"]
+    has_example = any(ek in answer_lower for ek in example_keywords)
+    example_score = 2 if has_example else 0
+    structure_score = 2 if structure_hits >= 2 else (1 if
+                                                     structure_hits == 1 else 0)
+
+
     structure_hits = sum(1 for m in structure_markers if m in answer_lower)
-    structure_score = 2 if has_example else 0
+    structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
 
+# Combine scores with weights to get a raw score out of 10
     raw = (
-        length_score * 0.20 +
-        keyword_score *0.25 +
-        concept_score * 0.30 +
-        structure_score * 0.10 +
-        example_score * 0.15
+        length_score * 0.2 +
+        keyword_score * 0.3 +
+        concept_score * 0.3 +
+        structure_score * 0.1 +
+        example_score * 0.1
     )
-
+# Different thresholds determine final score tier
     if raw >= 1.5:
-        points = 3
+        point = 3
     elif raw >= 1.0:
-        points = 2
+        point = 2
     elif raw >= 0.5:
-        pointers = 1
+        points = 1
     else:
-        pointers = 0
+        points = 0
 
-    feedback = build_feedback(
-        points, word_count, ideal_length,
-        keyowrd_hits, keywords,
+    feedback = build_feeback(
+        points, words_count, ideal_length,
+        keyword_hits, keywords,
         concept_hits, concepts,
         has_example, structure_hits, meta
     )
@@ -342,117 +351,88 @@ def grade(role: str, answer: str, question: str) -> tuple:
     breakdown = build_breakdown(
         keyword_hits, keywords,
         concept_hits, concepts,
-        has_example, word_count, ideal_length,
+        has_example, words_count, ideal_length,
         structure_hits
     )
 
     return feedback, points, breakdown
 
-def build_feedback(points, word_count, ideal_length,
-                   keyword_hits, keywords,
-                   concept_hits, concepts,
-                   has_example, structure_hits, meta) -> str:
+def build_feeback(points, words_count, ideal_length, keyword_hits, keywords, concept_hits, concepts, has_example, structure_hits, meta) -> str:
 
     lines = []
 
     if points == 3:
-        lines.append(
-            "Well done smartass, we get it ur smart ash"
-        )
+        lines.append("Well done smartass, you sound like you know your shi and you got the examples to back it up, gg gng")
         if keyword_hits:
-            line.append(f"Good job for writing key pointers, you correctly referenced : {',' .join(keyword_hits[:4])}."\
-                        )
-            
+            lines.append(f"Good job for using key terms like: {', '.join(keyword_hits)}")
+
+        if has_example:
+            lines.append("aint no way dawg, gj it cud be better but eh u'll be fine")
+
+    elif points == 2:
+        lines.append("yeah u could do sm better, put in sm effort for god's sake, its for ur own job")
+        missed_keywords = [k for k in keywords if k not in ' '.join(keyword_hits)][:3]
+        if missed_keywords:
+            lines.append(f"u dumb ash m8 icl, so improve here or else ur cooked dawg: {','.join(missed_keywords)}")
         if not has_example:
-            lines.append(
-                "aint no way, good job dawg its could be better icl"
-            )    
-        elif points == 2:
-            lines.append(
-                "yeah u could do sm better, put in sm effort for god's sake, its for ur own job"
-
-            )
-            missed_keywords = [k for k in keywords if k not in ' '.join(keyword_hits)][:3]
-            if missed_keywords:
-                lines.append(
-                    f"u dumb ash m8 icl, so improve here or else ur cooked dawg: {','.join(missed_keywords)}."
-                )
-            if not has_example:
-                lines.append("dont keep yappin bru its givin needy, give sm examples to make this answer more goated")
-            if word_count < ideal_length * 0.7:
-                lines.append(
-                    "yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer")
-                
-            elif points == 1:
-                lines.append(
-                    "ye study harder this aint js it bru"
-                )
-                if word_count<ideal_length * 0.5:
-                    lines.append(
-                        "yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer"
-                    )
-
-                missed_concepts = [c for c in concepts if c not in '' .join(concept_hits)][:3]
-                if missed_concepts:
-                    lines.append(
-                        f"u had many key ideas missin, tht aint finna gibbu a job unless u dont yap abt em: {','.join(missed_concepts)}."
-                    )
-                if not has_example:
-                    lines.append("use examples bru or else they aint finna let u slide")
-                
-
-            else:
-                lines.append(
-                    "man ts is so wrong, go back and study fr gng or u finna be jobless ash"
-                )
-                lines.append(
-                    "start with definition. explain how it words. give an example and dont fumble gng"
-                )
-                if keywords:
-                    lines.append(
-                        f"use terms like this lil bru: {','.join(keywords[:4])}."
-                    )
-                return " ".join(lines)
+            lines.append("dont keep yappin bru its givin needy, give sm examples to make this answer more goated")
+        if words_count < ideal_length * 0.7:
+            lines.append("yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer")
             
+    elif points == 1:
+        lines.append("ye study harder this aint js it bru")
+        if words_count < ideal_length * 0.5:
+            lines.append("yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer")
+
+        missed_concepts = [c for c in concepts if c not in ' '.join(concept_hits)][:3]
+        if missed_concepts:
+            lines.append(f"u had many key ideas missin, tht aint finna gibbu a job unless u dont yap abt em: {','.join(missed_concepts)}")
+        if not has_example:
+            lines.append("use examples bru or else they aint finna let u slide")
+            
+    else:
+        lines.append("man ts is so wrong, go back and study fr gng or u finna be jobless ash")
+        lines.append("start with definition. explain how it works. give an example and dont fumble gng")
+        if keywords:
+            lines.append(f"use terms like this lil bru: {','.join(keywords[:4])}")
+
+    return " ".join(lines)
+
 def build_breakdown(keyword_hits, keywords,
                     concept_hits, concepts,
-                    has_example, word_count, ideal_length,
+                    has_example, words_count, ideal_length,
                     structure_hits) -> str:
     lines = []
 
     if len(keyword_hits) >= len(keywords) * 0.5:
-        lines.append(f"+ used key technical terms like ({','. join(keywords_hits[:3])})")
-    elif keywords_hits:
-        lines.append(f"~ some technical terms which are present but emphasis on them 9{', '.join(keyword_hits[:2])}")
+        lines.append(f"+ used key technical terms like ({', '.join(keyword_hits[:3])})")
+    elif keyword_hits:
+        lines.append(f"~ some technical terms which are present but emphasis on them ({', '.join(keyword_hits[:2])})")
     else:
-        lines.append(" - Missing key technical terminology")
+        lines.append("- Missing key technical terminology")
 
-    if len(concepts_hits) >= len(concepts) * 0.4:
-        lines.append("A: gg gng ur pretty good")
-    elif concepts_hits:
-        lines.append(" ~ core concepts u need to yap on more")
+    if len(concept_hits) >= len(concepts) * 0.4:
+        lines.append("+ gg gng ur pretty good on core concepts")
+    elif concept_hits:
+        lines.append("~ core concepts u need to yap on more")
     else:
-        lines.append(f"- ye bru u gotta yap more than ({word_count} smth like {ideal_length}) or else u finna be cooked ash icl")   
-
+        lines.append(f"- ye bru u gotta yap more than ({words_count} smth like {ideal_length}) or else u finna be cooked ash icl")
     if has_example:
-        lines.append("+ Include a example bru")
-    elif word_count < ideal_length * 0.6:
+        lines.append("+ Include a example bru, good job")
+    elif words_count < ideal_length * 0.6:
         lines.append("- answer is too short, add an example to make it more convincing")
     else:
         lines.append("- touch grass and put sm real ex")
 
-    
-    if has_example:
-        lines.append("gg gng u got a example in there, good job")
-    else:
-        lines.append(" boring ash bru no example, add sm real world example to make it more convincing")
 
     if structure_hits >= 2:
-        lines.append(" g00d structure markers like (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
+        lines.append("+ g00d structure markers like (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
     else:
-        lines.append("yea bru u need to start lockin in, ts aint tuff icl")
 
-    return '\n'.join(lines)
+        lines.append("- yea bru u need to start lockin in, ts aint tuff icl")
+
+
+    return '\n'.join(lines)       
 
 def basic_grade(answer: str) -> tuple:
     '''Fallback grading if no question metadata is found. Just checks length and presence of examples.'''

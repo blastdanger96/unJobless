@@ -104,4 +104,4 @@ async function nextQuestion() {
     feedbackBox.className = 'hidden';
     
     await loadQuestion();
-    
+}
