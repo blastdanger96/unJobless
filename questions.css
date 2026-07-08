@@ -1,3 +1,5 @@
+/* universal reset, kills default browser margin/padding on every element and
+ width/height calculation include border+padding (box-sizing) */
 * {margin: 0; padding: 0; box-sizing: border-box}
 
 body {
@@ -6,11 +8,15 @@ body {
     font-family: 'VT323', monospace;
     font-size: 20px;
     min-height: 100vh;
+    /* min-height instead of height so the page can still grow taller than the viewport if 
+    content overflows rather than clipping it*/
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* centers every direct child horizontally since they're all narrower than the body */
     padding: 60px 20px 80px;
     gap: 40px;
+    /* flew gap instead of margin on each child, keeps spacing consistent without needing margin rules on every section */
 }
 
 .header {
@@ -19,10 +25,12 @@ body {
     width: 100%;
     max-width: 800px;
     gap: 15px;
+    /* gap has no effect here since .header isn't display:flex/grid -- this line is currently dead */
 }
 
 .header, .box, .dialog-box, #feedback-box, .footer {
     max-width: 900px;
+    /* caps every major section to same width so the layout read as one consistent column instead of each box being a different width */
 }
 
 .box {
@@ -32,16 +40,18 @@ body {
 
 .header h1 {
     font-family: 'Press Start 2P', monospace;
+    /* clamp(min, preferred, max): scales with viewport width (3vw) but
+    never shrinks below 1rem or grows past 1.6rem */
     font-size: clamp(1rem,3vw,1.6rem);
     letter-spacing: 5px;
     text-shadow: 4px 4px 0 #333;
+    /* solid drop shadow with no blur, gives the pixel-art/acade look rather than a soft realistic shadow */
     margin-bottom: 8px;
 }
 
 .header p {
     color: #666;
     letter-spacing: 3px;
-    margin-bottom: 12px;
     margin-bottom: 12px;
 }
 
@@ -51,10 +61,15 @@ body {
     font-size: 0.9rem;
     letter-spacing: 2px;
 }
+
 .back:hover {color: #fff;}
 
 .role-grid {
     display: grid;
+    /** auto-fit + minmax lets the grid decide how many columns fit per row:
+       as many 280px-minimum columns as fit, each stretching evenly (1fr)
+       to fill leftover space. this is what makes it responsive without
+       a media query */
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
     margin-bottom: 30px;
@@ -70,6 +85,7 @@ body {
     cursor: pointer;
     letter-spacing: 2px;
     text-align: left;
+    /* left-align since buttons contain a title + subtitle stacked vertically, not a single centered label*/
     transition: background 0.1s, color 0.1s, transform 0.05s;
     display: flex;
     flex-direction: column;
@@ -85,6 +101,7 @@ body {
 .role-btn:hover {
     background: #fff;
     color: #0a0a0a;
+    /* inverts the color scheme on hover instead of just dimming matches the high-contrast terminal aesthetic */
 }
 
 .role-btn:hover span {
@@ -95,6 +112,7 @@ body {
     background: #fff;
     color: #0a0a0a;
     border-color: #fff;
+    
 }
 
 .role-btn:active {
@@ -140,7 +158,7 @@ body {
 
 .box-label {
     font-family: 'Press Start 2P', monospace;
-    font-family: 0.4rem;
+    font-size: 0.4rem;
     color: #555;
     letter-spacing: 3px;
     margin-bottom: 14px;
@@ -200,7 +218,7 @@ textarea:focus {border-color: #aaa;}
     margin-bottom: 18px;
 }
 
-#feedack-box.hidden {display: none;}
+#feedback-box.hidden {display: none;}
 
 #feedback-text {
     font-size: 1.15rem;
@@ -222,7 +240,7 @@ textarea:focus {border-color: #aaa;}
 #feedback-box button {
     border: 3px solid #fff;
     background: #0a0a0a;
-    color: #fdff;
+    color: #fff;
     font-family: 'Press Start 2P', monospace;
     font-size: 0.42rem;
     padding: 12px 18px;
