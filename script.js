@@ -17,36 +17,56 @@ async function loadRoles() {
 function selectRole(role) {
     window.location.href = `questions.html?role=${encodeURIComponent(role)}`;
 }
-
+// dark/light theme btn 
 let currentlyTheme = 'dark'
 
 async function btnTheme() {
-    if (currentlyTheme === 'dark') {
-        currentlyTheme = 'light';
-
-    } else {
-        currentlyTheme = 'dark';
-    }
-    document.documentElement.setAttribute('data-theme', currentlyTheme);
-    saveChoice();
-}
-function saveChoice() {
-    localStorage.setItem('unjobless-theme', currentlyTheme);
-}
-function loadTheme() {
-    const saveTheme = localStorage.getItem('unjobless-theme');
-
-    if (saveTheme === 'light') {
-        currentlyTheme = 'light';
-        document.documentElement.setAttribute('data-theme','light');
-
-    } else if (saveTheme === 'dark') {
-        currentlyTheme = 'dark';
-        document.documentElement.setAttribute('data-theme','dark');
-    }
+   currentlyTheme = currentlyTheme === 'dark' ? 'light' : 'dark';
+   document.documentElement.setAttribute('data-theme', currentlyTheme);
+   localStorage.setItem('unjobless-theme',currentlyTheme);
     // default is dark btw
     //  i aint a monster to put tht shi on light on default
 }
 
-document.addEventListener('DOMContentLoaded', loadRoles);
+// typerwritr effect
+function runTypewriting() {
+    const el = document.getElementById('typewriter-text');
+    if (!el) return;
 
+    const text = 'no fluff. no filler. just interview prep.';
+    let i = 0;
+
+    function type() {
+        if (i< text.length) {
+            el.innerHTML = text.slice(0,i+1) + '<span classs="typerwriter-cursor">_</span>';
+            i++;
+            setTimeout(type,55);
+
+        } else {
+            el.innerHTML = text + '<span class="typewriter-cursor">_</span>';
+        }
+    }
+    setTimeout(type, 750);
+}
+
+function initReveal () {
+    const elemnts = document.querySelectorAll('.reveal:not(.visible)');
+    const observer = new IntersectionObserver((entries)=> {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.12});
+
+    elemnts.forEach(el => observer.observe(el));
+}
+
+// --boot---
+document.addEventListener('DOMContentLoaded', () => {
+    loadTheme();
+    loadRoles();
+    runTypewriting();
+    initReveal();
+})
