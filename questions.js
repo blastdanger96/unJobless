@@ -206,3 +206,14 @@ async function nextQuestion() {
     await loadQuestion();
 }
 
+async function skikQuestion() {
+    stopTimer();
+    document.getElementById('user-answer').value = null;
+    document.getElementById('word-count').textContent = '0';
+    document.getElementById('word-count-label').className = null;
+
+    const feedbackBox = document.getElementById('feedback-box');
+    feedbackBox.classList.add('hidden');
+    loadQuestion();
+}
+

@@ -183,6 +183,26 @@ body {
     margin-bottom: 14px;
 }
 
+#skip-btn {
+    width: 100%;
+    max-width: 600px;
+    border: 3px solid #555;
+    background: #0a0a0a;
+    color: grey;
+    font-family: 'Press Start 2P', monospace;
+    padding: 14px;
+    font-size: 0.5rem;
+    cursor: pointer;
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+    transition: background 0.08s, color 0.08s border-color 0.08s;
+}
+
+#skip-btn:hover {
+    border-color: #888;
+    cplor: #ccc;
+}
+
 #question-display {
     font-size: 1.5rem;
     line-height: 2.2;
