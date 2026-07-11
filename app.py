@@ -118,6 +118,17 @@ def get_status():
         'average': round(avg, 2),
         'by_role': score_data['by_role']
     })
+def score_ratio(hits, total, high, low):
+    if not total:
+        return 0
+    
+    ratio = len(hits) / total
+    if ratio >= high:
+        return 2
+    elif ratio >= low:
+        return 1
+    else:
+        return 0
 
 
 def grade(role: str, answer: str, question: str) -> tuple:
@@ -144,24 +155,12 @@ def grade(role: str, answer: str, question: str) -> tuple:
     # <--- Keyword score (0-2) --->
     keywords = meta.get('keywords', [])
     keyword_hits = [k for k in keywords if k.lower() in answer_lower]
-    keyword_score = 0
-    if keywords:
-        ratio = len(keyword_hits) / len(keywords)
-        if ratio >= 0.5:
-            keyword_score = 2
-        elif ratio >= 0.2:
-            keyword_score = 1
+    keyword_score = score_ratio(keyword_hits, len(keywords), 0.5, 0.2)
 
     # <--- Concept score (0-2) --->
     concepts = meta.get('concepts', [])
     concept_hits = [c for c in concepts if c.lower() in answer_lower]
-    concept_score = 0
-    if concepts:
-        ratio = len(concept_hits) / len(concepts)
-        if ratio >= 0.4:
-            concept_score = 2
-        elif ratio >= 0.2:
-            concept_score = 1
+    concept_score = score_ratio(concept_hits, len(concepts), 0.4, 0.2)
 
     # <--- Structure score (0-2) --->
     structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)

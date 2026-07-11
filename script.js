@@ -20,3 +20,35 @@ function selectRole(role) {
 
 document.addEventListener('DOMContentLoaded', loadRoles);
 
+let currentlyTheme = 'dark'
+
+async function btnTheme() {
+    if (currentlyTheme === 'dark') {
+        currentlyTheme = 'light';
+
+    } else {
+        currentlyTheme = 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', currentlyTheme);
+    saveChoice();
+}
+function saveChoice() {
+    localStorage.setItem('unjobless-theme', currentlyTheme);
+}
+function loadTheme() {
+    const saveTheme = localStorage.getItem('unjobless-theme');
+
+    if (saveTheme === 'light') {
+        currentlyTheme = 'light';
+        document.documentElement.setAttribute('data-theme','light');
+
+    } else if (saveTheme === 'dark') {
+        currentlyTheme = 'dark';
+        document.documentElement.setAttribute('data-theme','dark');
+    }
+    // default is dark btw
+    //  i aint a monster to put tht shi on light on default
+}
+
+document.addEventListener('DOMContentLoaded', loadRoles);
+
