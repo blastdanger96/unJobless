@@ -309,11 +309,11 @@ textarea:focus {border-color: #aaa;}
     text-align: center;
 }
 
-#time-display.warning {
+#timer-display.warning {
     color: orange;
 }
 
-#time-display.critical {
+#timer-display.critical {
     color: red;
 }
 
@@ -333,11 +333,11 @@ textarea:focus {border-color: #aaa;}
 }
 
 .timer-fill.warning {
-    color: rgb(255, 185, 56);
+    background: rgb(255, 185, 56);
 }
 
 .timer-fill.critical {
-    color: rgb(200, 0, 0);
+    background: rgb(200, 0, 0);
 }
 
 .cursor {display: inline-block; animation: blink 1s step-end infinite;}
