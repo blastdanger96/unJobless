@@ -2,6 +2,9 @@
 let role = null;
 let score = 0;
 let questionsAnswered = 0;
+let timeRemaining = 90;
+let timerInterval = null;
+const timer = 90;
 
 
 //it works out here cuz nthin below needs those to be ready

@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="./questions.css">
     <script src="./script.js" defer></script>
 </head>
-
+<!-- Cleaning the index page of the website -->
 <body>
 
     <!-- HEADER -->
@@ -25,39 +25,9 @@
         </div>
     </div>
 
-    <!-- STEP 2: QUESTION + ANSWER -->
-    <div class="box">
-        <div class="box-label">STEP 2 — ANSWER THE QUESTION</div>
-        <div class="dialog-text" id="question-display">
-            ▶ Select a role above to get your question<span class="cursor">_</span>
-        </div>
-        <textarea
-            class="question-box"
-            id="user-answer"
-            rows="6"
-            placeholder="Type your answer here...">
-        </textarea>
-        <div class="box-label" id="word-count-label">
-            <span id="word-count">0 Words</span>
-        </div>
-    </div>
-
-    <!-- SUBMIT BUTTON -->
-    <button class="start-btn" onclick="submitAnswer()">
-        ▶ SUBMIT ANSWER
-    </button>
-
-    <!-- FEEDBACK BOX (hidden until submitted) -->
-    <div class="dialog-box" id="feedback-box">
-        <div class="dialog-speaker">MOCKMATE FEEDBACK</div>
-        <div class="dialog-text" id="feedback-text"></div>
-        <button class="next-btn" onclick="nextQuestion()">▶ NEXT QUESTION</button>
-    </div>
-
     <!-- FOOTER -->
     <div class="footer">
         <span>unJobless v1.0</span>
-        <span>SCORE <span id="score">—</span></span>
         <span>BUILT FOR HACK CLUB ❤️</span>
     </div>
 
