@@ -161,7 +161,6 @@ def grade(role: str, answer: str, question: str) -> tuple:
     concepts = meta.get('concepts', [])
     concept_hits = [c for c in concepts if c.lower() in answer_lower]
     concept_score = score_ratio(concept_hits, len(concepts), 0.4, 0.2)
-
     # <--- Structure score (0-2) --->
     structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
     structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)

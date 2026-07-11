@@ -18,8 +18,6 @@ function selectRole(role) {
     window.location.href = `questions.html?role=${encodeURIComponent(role)}`;
 }
 
-document.addEventListener('DOMContentLoaded', loadRoles);
-
 let currentlyTheme = 'dark'
 
 async function btnTheme() {
