@@ -99,7 +99,7 @@ function updateDisplay() {
 
     const mins = Math.floor(timeRemaining / 60);
     const sec = timeRemaining % 60;
-    timerEl.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+    timerEl.textContent = `${mins}:${sec.toString().padStart(2,'0')}`;
 
     const pct = (timeRemaining/timer_sec) * 100;
     timerFillEl.style.width = pct + '%';
@@ -138,7 +138,7 @@ async function submitAnswer() {
     }
 
     stopTimer();
-    
+
     const btn = document.getElementById('submit-btn');
 
     btn.disabled = true;

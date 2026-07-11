@@ -299,6 +299,24 @@ textarea:focus {border-color: #aaa;}
 
 }
 
+#timer-display {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.8rem;
+    color: #4caf50;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+#time-display.warning {
+    color: orange;
+}
+
+#time-display.critical {
+    color: red;
+}
+
 .timer-track {
     width: 100%;
     height: 8px;
@@ -315,11 +333,11 @@ textarea:focus {border-color: #aaa;}
 }
 
 .timer-fill.warning {
-    background: rgb(255, 185, 56);
+    color: rgb(255, 185, 56);
 }
 
 .timer-fill.critical {
-    background: rgb(200, 0, 0);
+    color: rgb(200, 0, 0);
 }
 
 .cursor {display: inline-block; animation: blink 1s step-end infinite;}
