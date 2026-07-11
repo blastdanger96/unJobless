@@ -9,6 +9,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     // pulls wtrv after ? in the URL
     role = params.get('role');
+// Ctrl+Enter shortcut to submit answer without using the button
+document.getElementById('user-answer').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        submitAnswer();
+    }
+});
 
     if (!role) {
         // no rle in the URL means the user landed here without going through index.html's role buttons, so there's isn't anything to quiz em on
@@ -34,18 +41,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     // waiting here means nothing else in this listener runs until the irst question has actually loaded
 });
 
-// Word counter code
-function initWordCount() {
-    const textarea = document.getElementById('user-answer');
-    const countEl = document.getElementById('word-count');
 
-    textarea.addEventListener('input',()=> {
-        const text = textarea.value.trim();
-        const count = text === '' ? 0 : text.split(/\s+/).length;
-        countEl.textContent = count + 'WORDS';
-        countEl.parentElement.className = 'box-label' + (count >=50 ? 'goood' : '');
-    })
-}
 
 async function loadQuestion() {
     try {
@@ -132,7 +128,7 @@ async function submitAnswer() {
 async function nextQuestion() {
     document.getElementById('user-answer').value = '';
     document.getElementById('word-count').textContent = '0';
-    document.getElementById('word-count-label').parentElement.className = 'word-count';
+    document.getElementById('word-count-label').className = '';
     // resets the word count display back to its default (non-"good") styling
     
     const feedbackBox = document.getElementById('feedback-box');

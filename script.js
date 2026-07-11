@@ -17,6 +17,17 @@ async function selectRole(btn, role) {
     await loadQuestion(role);
 }
 
+// Ctrl+Enter shortcut key for submitting the answer without clicking the button
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('user-answer').addEventListener('keydown', (e)=> {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submitAnswer();
+        }
+    });
+
+});
+
 /**
  * Impliments the code for buttons on frontend in case of expanding roles
  */
@@ -67,7 +78,7 @@ async function submitAnswer() {
     }
 
     // Check if answer is long enough
-    if (answer.length < 25) {
+    if (answer.length < 20) {
         // this pg uses a 25-character min while questions.js
         //uses 20 worth aligning the two if the intenet is one consistent rule
         alert('Boy dont play with me, write at least 25 words gng');
@@ -120,6 +131,7 @@ async function submitAnswer() {
 async function nextQuestion() {
     document.getElementById('user-answer').value = '';
     document.getElementById('feedback-box').style.display = 'none';
+    await loadQuestion(selectRole);
     //NOTE: this doesn't call loadQuestion() again, so clicking "next" on
     // this pg clears the ans box but leaves the old question on screen
 }

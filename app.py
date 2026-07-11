@@ -27,6 +27,11 @@ STRUCTURE_MARKERS = [
     "for instance", "this means", "which means"
 ]
 
+EXAMPLE_MARKERS = [
+    "for example", "for instance", "e.g.", "such as","in my experience",
+    "when i", "at my previous", "one time"
+]
+
 # tracks the last question shown per role, so we don't immediately repeat it
 _recent: dict = {}
 # tracks per-user score history: {user_id: {"points": [...], "by_role": {role: [...]}}}
@@ -343,24 +348,24 @@ def health():
     })
 
 
-if __name__ == '__main__':
-    @app.route('/roles')
-    def get_roles():
+
+@app.route('/roles')
+def get_roles():
     #sends the frontend everything it needs to build role btns:
-        return jsonify([
-            {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
-            for role, data in ROLE_DATA.items()
+    return jsonify([
+        {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
+        for role, data in ROLE_DATA.items()
     ])
-    # only runs when this file executed directly (not when imported), so importing app.py elsewhere won't accidentally spin up the sevrer
-print("\n" + "=" * 52)
-print(" unJ0bless Backend")
-print("=" * 52)
-print(" URL    -> http://localhost:8000")
-print(" Health -> http://localhost:8000/health")
-print(" Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
-print(f" Roles  -> {', '.join(QUESTIONS.keys())}")
-print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
-print("=" * 52 + "\n")
-app.run(debug=True, port=8000)
-        # debug = True gives aut-reload on save and a live traceback in-browser on errors
-        # fine for local dev, should be off b4 this ever goes near production
+if __name__ == '__main__':
+    print("\n" + "=" * 52)
+    print(" unJ0bless Backend")
+    print("=" * 52)
+    print(" URL    -> http://localhost:8000")
+    print(" Health -> http://localhost:8000/health")
+    print(" Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
+    print(f" Roles  -> {', '.join(QUESTIONS.keys())}")
+    print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
+    print("=" * 52 + "\n")
+    app.run(debug=True, port=8000)
+            # debug = True gives aut-reload on save and a live traceback in-browser on errors
+            # fine for local dev, should be off b4 this ever goes near production
