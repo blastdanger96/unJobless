@@ -4,7 +4,8 @@ let score = 0;
 let questionsAnswered = 0;
 let timeRemaining = 90;
 let timerInterval = null;
-const timer = 90;
+const timer_sec = 90;
+
 
 
 //it works out here cuz nthin below needs those to be ready
@@ -45,7 +46,6 @@ document.getElementById('user-answer').addEventListener('keydown', (e) => {
 });
 
 
-
 async function loadQuestion() {
     try {
         const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
@@ -58,12 +58,75 @@ async function loadQuestion() {
         // innerHTML (not textContent) because the blinking cursor span needs to actually render as an element not literal txt
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
         // +1 since questionsAnswered only increments after a question being asked now
+        document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
+        startTimer();
+
     } catch (err) {
         document.getElementById('question-display').innerHTML = 
         'fah';
         // generic fallback message covers both network failure and bad response 
     } 
 }
+
+async function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timeRemaining = timer_sec;
+    updateDisplay();
+
+    timerInterval = setInterval(() =>{
+        timeRemaining--;
+        updateDisplay();
+
+        if (timeRemaining <= 0 ) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            handleTime();
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+function updateDisplay() {
+    const timerEl = document.getElementById('timer-display');
+    const timerFillEl = document.getElementById('timer-fill');
+    if (!timerEl || !timerFillEl) return;
+
+    const mins = Math.floor(timeRemaining / 60);
+    const sec = timeRemaining % 60;
+    timerEl.textContent = '${mins}:${secs.toString().padStart(2,'0')}';
+
+    const pct = (timeRemaining/timer_sec) * 100;
+    timerFillEl.style.width = pct + '%';
+
+    timerEl.classList.remove('warning','critical');
+    timerFillEl.classList.remove('warning','critical');
+
+    if (timeRemaining <= 10) {
+        timerEl.classList.add('critical');
+        timerFillEl.classList.add('critical');
+    } else if (timeRemaining <= 30) {
+        timerEl.classList.add('warning');
+        timerFillEl.classList.add('warning');
+    }
+
+}
+
+function handleTime () {
+    const answer = document.getElementById('user-answer').value.trim();
+    if (answer.length >= 20) {
+        submitAnswer();
+    } else {
+        alert('times up lil bro')
+        nextQuestion();
+    }
+}
+
 
 async function submitAnswer() {
     const answer = document.getElementById('user-answer').value.trim();
@@ -73,6 +136,9 @@ async function submitAnswer() {
         alert('stop being deadass fam and write fr gng');
         return;
     }
+
+    stopTimer();
+    const btn = document.getElementById('submit-btn');
 
     const btn = document.getElementById('submit-btn');
     btn.disabled = true;

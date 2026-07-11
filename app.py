@@ -1,25 +1,18 @@
 from flask import Flask, request, jsonify, send_from_directory
-#request reads incoming data (query params, JSON Body)
-# jsnoify converts python dicts into a proper JSON HTTP response
-#send_from directiory lets us serve the frontend files (html/css/js) straight off disk
 import random
-#used to pick a random question from the pool each time /question is hit
 import json
-#used to avoid repetitions in the python code for question dict
 import os
 
-
 app = Flask(__name__, static_folder='.')
-# static_folder = '.' means the current directory is treated as the static root
 
 QUESTION_FILE = os.path.join(os.path.dirname(__file__), 'questions.json')
-#it has the same format for ur grade()/get_question() code except in the json file :)
 
 with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
     ROLE_DATA = json.load(f)['roles']
 
 QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
-#word/phrases tht suggest the answer acc organized rather than js a wall of txt, used to score "structure" seprately from content
+
+# Words/phrases that signal structured answers — scored separately from content
 STRUCTURE_MARKERS = [
     "first", "second", "third", "finally", "however",
     "for example", "such as", "because", "therefore",
@@ -28,49 +21,41 @@ STRUCTURE_MARKERS = [
 ]
 
 EXAMPLE_MARKERS = [
-    "for example", "for instance", "e.g.", "such as","in my experience",
+    "for example", "for instance", "e.g.", "such as", "in my experience",
     "when i", "at my previous", "one time"
 ]
 
-# tracks the last question shown per role, so we don't immediately repeat it
+# Tracks last question shown per role to avoid immediate repeats
 _recent: dict = {}
-# tracks per-user score history: {user_id: {"points": [...], "by_role": {role: [...]}}}
-_user_scores: dict = {}
 
+# Per-user score history: {user_id: {"points": [...], "by_role": {role: [...]}}}
+_user_scores: dict = {}
 
 
 @app.route('/')
 def index():
-    # root route js hands back index.html, the role-selector page
     return send_from_directory('.', 'index.html')
-
 
 
 @app.route('/<path:filename>')
 def static_files(filename):
-    # catch-all route so any file requsted by name (script.js, question.css, etc) gets 
-    # gets served straight from the project folder instead of needing its own route
     return send_from_directory('.', filename)
 
 
 @app.route('/question')
 def get_question():
-    #.strip() guards against a role comin in with stray whitespace, e.g. "?role=Consultant%20"
     role = request.args.get('role', '').strip()
 
     if role not in QUESTIONS:
-        #bail early with a 400 if sm1 passes a role we have no questions for
         return jsonify({'error': f'Unknown role: {role}'}), 400
 
     pool = QUESTIONS[role]
     last = _recent.get(role)
-    # filter out whatever question was shown last time so it doesn't repeat back to back
-    # "or pool" is a fallback: if filtering leaves nthin (pool only had 1 question)
-    # fall back to a full pool so random.choice nvr gets an empty list
+
+    # Exclude last question to avoid immediate repeats; fallback to full pool if only 1 question exists
     available = [q for q in pool if q['q'] != last] or pool
     chosen = random.choice(available)
     _recent[role] = chosen['q']
-    # remember this one so next call exlcudes it
 
     return jsonify({'question': chosen['q'], 'role': role})
 
@@ -78,27 +63,22 @@ def get_question():
 @app.route('/submit', methods=['POST'])
 def submit():
     body = request.get_json(silent=True)
-    #silent=true means a missin json body returns none instead of throwing
     if not body:
         return jsonify({'error': 'No data received'}), 400
 
     role = body.get('role', '').strip()
     answer = body.get('answer', '').strip()
     user_id = body.get('user_id', 'anonymous').strip() or 'anonymous'
-    # the "or 'anonymous" catches the case where user_id was sent as an empty string
     question = _recent.get(role, '')
-    # pulls whtrv questions we last handed out for this role, so grade () can look up the matching keywords/concepts for it
 
     if role not in QUESTIONS:
         return jsonify({'error': 'Invalid role'}), 400
     if len(answer) < 20:
-        # matches the frontend's own minimum length check, kept here too since the frotnend checks can be bypassed by hittin the api directly
         return jsonify({'error': 'Answer too short'}), 400
 
     feedback, points, breakdown = grade(role, answer, question)
 
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
-    # setdefault creates the entry on first submit and js returns it on later ones (it rotates the entries ig)
     user_record['points'].append(points)
     user_record['by_role'].setdefault(role, []).append(points)
 
@@ -130,31 +110,27 @@ def get_status():
 
 
 def grade(role: str, answer: str, question: str) -> tuple:
-    # find the metadata dict matching the exact question txt tht was asked so we know wich keywords to check the answer against
+    # Find question metadata to get keywords/concepts for this specific question
     meta = next(
         (q for q in QUESTIONS.get(role, []) if q['q'] == question),
         None
     )
     if not meta:
-        # question wasnt found so fall back to a gradin scheme that only looks at length and examples
         return basic_grade(answer)
 
     answer_lower = answer.lower()
-    # lowercased once up front so every keywrod/concept check below is case-insensitive
     words = answer_lower.split()
     word_count = len(words)
     ideal_length = meta.get('ideal_length', 80)
-    # 80 as a fallback in case a question entry is missin this field
 
-    # --- length score (0-2) ---
+    # --- Length score (0-2) ---
     length_score = 0
     if word_count >= ideal_length:
         length_score = 2
     elif word_count >= ideal_length * 0.6:
-        # partial credit for getting reasonably close to the target length
         length_score = 1
 
-    # --- keyword score (0-2) ---
+    # --- Keyword score (0-2) ---
     keywords = meta.get('keywords', [])
     keyword_hits = [k for k in keywords if k.lower() in answer_lower]
     keyword_score = 0
@@ -165,7 +141,7 @@ def grade(role: str, answer: str, question: str) -> tuple:
         elif ratio >= 0.2:
             keyword_score = 1
 
-    # --- concept score (0-2) ---
+    # --- Concept score (0-2) ---
     concepts = meta.get('concepts', [])
     concept_hits = [c for c in concepts if c.lower() in answer_lower]
     concept_score = 0
@@ -176,17 +152,15 @@ def grade(role: str, answer: str, question: str) -> tuple:
         elif ratio >= 0.2:
             concept_score = 1
 
-
-    # --- structure score (0-2) ---
+    # --- Structure score (0-2) ---
     structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
     structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
 
-    # --- example score (0-2) ---
+    # --- Example score (0-2) ---
     has_example = any(m in answer_lower for m in EXAMPLE_MARKERS)
     example_score = 2 if has_example else 0
 
-    # each sub-score is 0-2, weighted and summed into one number out of 2
-    # weights add up to 1.0, so raw itself lands somewhere in [0,2]
+    # Weighted composite: keywords/concepts matter most (30% each), length 20%, structure/examples 10% each
     raw = (
         length_score * 0.2 +
         keyword_score * 0.3 +
@@ -194,7 +168,8 @@ def grade(role: str, answer: str, question: str) -> tuple:
         structure_score * 0.1 +
         example_score * 0.1
     )
-    # raw gets bucketed down into a simple 0-3 point scale for display
+
+    # Bucket into 0-3 display points
     if raw >= 1.5:
         points = 3
     elif raw >= 1.0:
@@ -225,8 +200,6 @@ def build_feedback(points, word_count, ideal_length,
                     keyword_hits, keywords,
                     concept_hits, concepts,
                     has_example) -> str:
-    # builds the casual, slang-heavy headline feedback shown to the user. branches purely on the points bucket computed in grade()
-
     lines = []
 
     if points == 3:
@@ -239,7 +212,6 @@ def build_feedback(points, word_count, ideal_length,
     elif points == 2:
         lines.append("yeah u could do sm better, put in sm effort for god's sake, its for ur own job")
         missed_keywords = [k for k in keywords if k not in keyword_hits][:3]
-        # [:3] caps the callout list so feedback doesn't turn into a wall of txt
         if missed_keywords:
             lines.append(f"u missed sm key terms icl, so improve here or else ur cooked dawg: {', '.join(missed_keywords)}.")
         if not has_example:
@@ -258,7 +230,6 @@ def build_feedback(points, word_count, ideal_length,
             lines.append("use examples bru or else they aint finna let u slide")
 
     else:
-        # points == 0
         lines.append("man ts is so wrong, go back and study fr gng or u finna be jobless ash")
         lines.append("start with the definition. explain how it works. give an example and dont fumble gng")
         if keywords:
@@ -271,7 +242,6 @@ def build_breakdown(keyword_hits, keywords,
                      concept_hits, concepts,
                      has_example, word_count, ideal_length,
                      structure_hits) -> str:
-    # this is the second more granular feedback block (the +/- lines) shown under the main headline feedback
     lines = []
 
     if keywords and len(keyword_hits) >= len(keywords) * 0.5:
@@ -300,18 +270,13 @@ def build_breakdown(keyword_hits, keywords,
     else:
         lines.append("- yea bru u need to start lockin in on structure, ts aint tuff icl")
 
-        # joined with real newlines (not spaces like build_feedback) since this renders as a stacked list in the UI rather than a paragraph
-
     return '\n'.join(lines)
 
 
 def basic_grade(answer: str) -> tuple:
-    """Fallback grading if no question metadata is found. Checks length and presence of an example."""
+    """Fallback grading when no question metadata exists. Scores on length + example presence only."""
     has_example = any(m in answer.lower() for m in EXAMPLE_MARKERS)
     words = len(answer.split())
-
-    # much better than the main grade() function: length is the only real
-    # signal here since there's no keyword/concept list to check against
 
     if words < 30:
         feedback = "u are absolutely jobless fam try to yap more and give examples or else u finna be homeless ash"
@@ -338,7 +303,6 @@ def basic_grade(answer: str) -> tuple:
 
 @app.route('/health')
 def health():
-    # simple status endpoint, useful for confirming the server's up and seeing question counts without digging through the code
     return jsonify({
         'status': 'running',
         'ai_enabled': False,
@@ -348,14 +312,14 @@ def health():
     })
 
 
-
 @app.route('/roles')
 def get_roles():
-    #sends the frontend everything it needs to build role btns:
     return jsonify([
         {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
         for role, data in ROLE_DATA.items()
     ])
+
+
 if __name__ == '__main__':
     print("\n" + "=" * 52)
     print(" unJ0bless Backend")
@@ -367,5 +331,3 @@ if __name__ == '__main__':
     print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
     print("=" * 52 + "\n")
     app.run(debug=True, port=8000)
-            # debug = True gives aut-reload on save and a live traceback in-browser on errors
-            # fine for local dev, should be off b4 this ever goes near production
