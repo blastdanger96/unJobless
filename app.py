@@ -66,7 +66,9 @@ def get_question():
     chosen = random.choice(available)
     _recent[role] = chosen['q']
 
-    return jsonify({'question': chosen['q'], 'role': role})
+    difficulty = get_difficulty(chosen.get('ideal_length', 80))
+
+    return jsonify({'question': chosen['q'], 'role': role, 'difficutly': difficulty})
 
 
 @app.route('/submit', methods=['POST'])
@@ -283,7 +285,7 @@ def build_breakdown(keyword_hits, keywords,
 
 
 def basic_grade(answer: str) -> tuple:
-    """Fallback grading when no question metadata exists. Scores on length + example presence only."""
+    #Fallback grading when no question metadata exists. Scores on length + example presence only. (can use """ for comments too but keep it simple)
     has_example = any(m in answer.lower() for m in EXAMPLE_MARKERS)
     words = len(answer.split())
 
@@ -327,16 +329,8 @@ def get_roles():
         {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
         for role, data in ROLE_DATA.items()
     ])
-
-
 if __name__ == '__main__':
-    print("\n" + "=" * 52)
-    print(" unJ0bless Backend")
-    print("=" * 52)
-    print(" URL    -> http://localhost:8000")
-    print(" Health -> http://localhost:8000/health")
-    print(" Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
-    print(f" Roles  -> {', '.join(QUESTIONS.keys())}")
-    print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
-    print("=" * 52 + "\n")
+
+    print("unst.J0e_bless running on localhost:8000", {len(QUESTIONS)}, "roles", {sum(len(v) for v in QUESTIONS.values())}, "questions fetched")
     app.run(debug=True, port=8000)
+
