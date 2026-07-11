@@ -200,7 +200,25 @@ body {
 
 #skip-btn:hover {
     border-color: #888;
-    cplor: #ccc;
+    color: #ccc;
+}
+
+#difficulty-lvl {
+    padding: 3px 8px;
+    border: 1px solid;
+    font-size: 0.35rem;
+    letter-spacing: 2px;
+}
+#difficulty-lvl.easy {
+    color: greenyellow;
+}
+
+#difficulty-lvl.medium {
+    color:rgb(255, 185, 56)
+}
+
+#difficulty-lvl.hard {
+    color: red;
 }
 
 #question-display {

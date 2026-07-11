@@ -42,6 +42,13 @@ def index():
 def static_files(filename):
     return send_from_directory('.', filename)
 
+def get_difficulty(ideal_length: int) -> str:
+    if ideal_length <= 85:
+        return 'easy'
+    elif ideal_length <= 100:
+        return 'medium'
+    else:
+        return 'hard'
 
 @app.route('/question')
 def get_question():

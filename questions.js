@@ -60,6 +60,13 @@ async function loadQuestion() {
         // +1 since questionsAnswered only increments after a question being asked now
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
         startTimer();
+        // badge info fetched from len of string in py
+        const badge = document.getElementById('difficulty-lvl');
+
+        if (badge && data.difficulty) {
+            badge.textContent = data.difficulty.toUpperCase();
+        badge.className = data.difficulty;
+        }
 
     } catch (err) {
         document.getElementById('question-display').innerHTML = 
