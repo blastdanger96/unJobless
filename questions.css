@@ -38,6 +38,10 @@ body {
     margin-bottom: 30px;
 }
 
+.box-label.goood {
+    color: #4caf50;
+}
+
 .header h1 {
     font-family: 'Press Start 2P', monospace;
     /* clamp(min, preferred, max): scales with viewport width (3vw) but

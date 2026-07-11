@@ -4,9 +4,7 @@ let score = 0;
 let questionsAnswered = 0;
 
 
-// DOMContentLoaded fires once the HTML is parsed, b4 images/fonts finish loading. 
 //it works out here cuz nthin below needs those to be ready
-//marked async because loadQuestion() inside needs to be awaited
 window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     // pulls wtrv after ? in the URL
@@ -23,11 +21,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('role-subtitle').textContent = '//' + role + 'Interview //';
 
     document.getElementById('user-answer').addEventListener('input', () => {
-        // fires on every keystroke in the textaea, used to live-update the word counter
+        // used to live-update the word counter in textarea
         const text = document.getElementById('user-answer').value.trim();
         const count = text == '' ? 0 :text.split(/\s+/).length;
-        // splitting on \s+ (one or more white chars) avoids miscounting
-        //when tere are double spaces or tabs between words
+        //not to count double-spaces and tab spaces
         const el = document.getElementById('word-count');
         el.textContent = count;
         el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
@@ -37,6 +34,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     // waiting here means nothing else in this listener runs until the irst question has actually loaded
 });
 
+// Word counter code
+function initWordCount() {
+    const textarea = document.getElementById('user-answer');
+    const countEl = document.getElementById('word-count');
+
+    textarea.addEventListener('input',()=> {
+        const text = textarea.value.trim();
+        const count = text === '' ? 0 : text.split(/\s+/).length;
+        countEl.textContent = count + 'WORDS';
+        countEl.parentElement.className = 'box-label' + (count >=50 ? 'goood' : '');
+    })
+}
+
 async function loadQuestion() {
     try {
         const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
@@ -45,13 +55,13 @@ async function loadQuestion() {
         // fetch only rejects on network failure not on HTTP error codes, so this manual check is wht catches a 400/500 from backend
         const data = await res.json();
         document.getElementById('question-display').innerHTML =
-            '▶ ' + data.question + '<span class="cursor">_</span>';
+            '> ' + data.question + '<span class="cursor">_</span>';
         // innerHTML (not textContent) because the blinking cursor span needs to actually render as an element not literal txt
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
         // +1 since questionsAnswered only increments after a question being asked now
     } catch (err) {
         document.getElementById('question-display').innerHTML = 
-        'ye cant reach testube or flask or smth, fah';
+        'fah';
         // generic fallback message covers both network failure and bad response 
     } 
 }

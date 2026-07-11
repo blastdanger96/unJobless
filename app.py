@@ -4,282 +4,21 @@ from flask import Flask, request, jsonify, send_from_directory
 #send_from directiory lets us serve the frontend files (html/css/js) straight off disk
 import random
 #used to pick a random question from the pool each time /question is hit
+import json
+#used to avoid repetitions in the python code for question dict
+import os
+
 
 app = Flask(__name__, static_folder='.')
 # static_folder = '.' means the current directory is treated as the static root
-# this is wht lets index.html, questions.html, script.js etc. get served directly 
-# ================================================================
-#  QUESTION BANK
-#  Each question carries:
-#  - keywords: terms a strong answer should use
-#  - concepts: higher level ideas that should appear
-#  - common_mistakes: things weak answers typically do (optional)
-#  - ideal_length: rough word count of a strong answer
-# ================================================================
 
-#this whole QUESTIONS dict is just data, not logic, one key per role,
-# each value is a list of question idcts, sm entriesr written out long-form and sm r squeezed into one line cuz why not
+QUESTION_FILE = os.path.join(os.path.dirname(__file__), 'questions.json')
+#it has the same format for ur grade()/get_question() code except in the json file :)
 
-QUESTIONS = {
-    "Software Engineer": [
-        {
-            "q": "Explain the difference between a stack and a queue. When would you use each?",
-            "keywords": ["lifo", "fifo", "push", "pop", "enqueue", "dequeue"],
-            "concepts": ["last in first out", "first in first out", "undo", "history", "print queue", "bfs", "dfs", "recursion"],
-            "common_mistakes": ["only defining one", "no real example", "confusing the order"],
-            "ideal_length": 80
-        },
-        {
-            "q": "What is Big O notation? Walk me through O(n), O(log n), and O(n²) with examples.",
-            "keywords": ["time complexity", "space complexity", "algorithm", "loop", "binary search", "nested"],
-            "concepts": ["worst case", "linear", "logarithmic", "quadratic", "scales", "performance"],
-            "common_mistakes": ["no examples", "only defining without explaining", "missing the practical implication"],
-            "ideal_length": 100
-        },
-        {
-            "q": "Walk me through how you would design a URL shortener like bit.ly.",
-            "keywords": ["hash", "database", "redirect", "collision", "base62", "cache"],
-            "concepts": ["unique id", "mapping", "lookup", "short code", "long url", "302 redirect", "scale"],
-            "common_mistakes": ["skipping the database design", "no collision handling", "no scale discussion"],
-            "ideal_length": 120
-        },
-        {
-            "q": "What is the difference between SQL and NoSQL? When would you choose one over the other?",
-            "keywords": ["relational", "schema", "acid", "scalability", "document", "joins", "table"],
-            "concepts": ["structured data", "flexible schema", "consistency", "horizontal scaling", "use case"],
-            "common_mistakes": ["saying one is always better", "no concrete examples", "ignoring trade-offs"],
-            "ideal_length": 100
-        },
-        {
-            "q": "Explain what recursion is. What are its risks and how do you mitigate them?",
-            "keywords": ["base case", "call stack", "overflow", "memoization", "fibonacci"],
-            "concepts": ["function calls itself", "termination condition", "infinite loop risk", "memory", "dynamic programming"],
-            "common_mistakes": ["no base case mention", "no stack overflow risk", "no mitigation strategy"],
-            "ideal_length": 90
-        },
-        {
-            "q": "How does a hash table work? What happens during a collision?",
-            "keywords": ["hash function", "bucket", "chaining", "open addressing", "load factor"],
-            "concepts": ["key to index", "array", "constant time", "worst case", "linked list", "probing"],
-            "common_mistakes": ["skipping collision handling", "no complexity analysis", "vague on implementation"],
-            "ideal_length": 90
-        },
-        {
-            "q": "What is REST and how does it differ from GraphQL?",
-            "keywords": ["endpoint", "http", "over-fetching", "under-fetching", "schema", "query", "mutation"],
-            "concepts": ["multiple endpoints", "single endpoint", "flexible queries", "typed", "bandwidth", "versioning"],
-            "common_mistakes": ["only defining REST", "no trade-off comparison", "no concrete example"],
-            "ideal_length": 100
-        },
-        {
-            "q": "What is the difference between a process and a thread?",
-            "keywords": ["memory", "concurrency", "shared", "isolation", "context switch", "os"],
-            "concepts": ["separate memory space", "lightweight", "communication", "crash isolation", "gil"],
-            "common_mistakes": ["no memory distinction", "no use case", "no trade-off"],
-            "ideal_length": 90
-        },
-        {"q": "Explain polymorphism and how it's different from inheritance.", "keywords": ["method overriding", "interface", "dynamic dispatch", "subtype"], "concepts": ["behavior variation", "code reuse", "abstraction"], "ideal_length": 90},
-        {"q": "What is a design pattern? Name 3 and explain when to use each.", "keywords": ["singleton", "factory", "observer", "template", "strategy"], "concepts": ["reusable solution", "structure", "communication"], "ideal_length": 100},
-        {"q": "Describe the difference between imperative and declarative programming.", "keywords": ["how vs what", "state mutations", "functional", "sql"], "concepts": ["programming paradigm", "abstraction level"], "ideal_length": 80},
-        {"q": "What is a distributed system? What are the main challenges?", "keywords": ["network partition", "consistency", "fault tolerance", "consensus"], "concepts": ["scalability", "cap theorem", "eventual consistency"], "ideal_length": 110},
-        {"q": "Explain ACID properties in databases.", "keywords": ["atomicity", "consistency", "isolation", "durability", "transaction"], "concepts": ["data integrity", "reliability"], "ideal_length": 90},
-        {"q": "What is caching? What are cache invalidation strategies?", "keywords": ["ttl", "lru", "write-through", "write-back", "memory"], "concepts": ["performance", "data freshness"], "ideal_length": 95},
-        {"q": "How would you debug a memory leak in production?", "keywords": ["heap dump", "profiler", "garbage collector", "reference"], "concepts": ["performance degradation", "root cause"], "ideal_length": 100},
-        {"q": "Explain the difference between composition and inheritance.", "keywords": ["has-a", "is-a", "flexibility", "coupling"], "concepts": ["oop design", "code organization"], "ideal_length": 85},
-        {"q": "What is containerization and how does Docker work?", "keywords": ["image", "container", "namespace", "layer", "registry"], "concepts": ["deployment", "isolation", "reproducibility"], "ideal_length": 100},
-        {"q": "Describe a microservices architecture. What are its benefits and drawbacks?", "keywords": ["service", "scalability", "complexity", "communication", "distributed"], "concepts": ["architecture", "trade-offs"], "ideal_length": 120},
-        {"q": "What is CI/CD and why is it important?", "keywords": ["pipeline", "testing", "deployment", "automation", "feedback"], "concepts": ["development velocity", "quality"], "ideal_length": 90},
-        {"q": "Explain the difference between stateless and stateful services.", "keywords": ["session", "scaling", "horizontal", "session store"], "concepts": ["architecture", "reliability"], "ideal_length": 85},
-        {"q": "What is sharding in databases? When would you use it?", "keywords": ["partition", "key", "horizontal scaling", "distributed"], "concepts": ["scalability", "data distribution"], "ideal_length": 95},
-        {"q": "Describe the Observer pattern and where it's used.", "keywords": ["event", "listener", "publish-subscribe", "coupling"], "concepts": ["design pattern", "decoupling"], "ideal_length": 85},
-        {"q": "What is the difference between OAuth and JWT?", "keywords": ["authentication", "authorization", "token", "stateless", "delegation"], "concepts": ["security", "identity"], "ideal_length": 95},
-        {"q": "Explain what a CDN is and why companies use it.", "keywords": ["edge", "cache", "latency", "bandwidth", "distribution"], "concepts": ["performance", "global scale"], "ideal_length": 85},
-        {"q": "What is load balancing? Describe different strategies.", "keywords": ["round-robin", "weighted", "least connections", "sticky"], "concepts": ["scalability", "reliability"], "ideal_length": 100},
-        {"q": "Describe the MVC architecture pattern.", "keywords": ["model", "view", "controller", "separation", "concern"], "concepts": ["organization", "testability"], "ideal_length": 85},
-        {"q": "What is an API and what makes a good REST API?", "keywords": ["endpoint", "resource", "status code", "versioning", "documentation"], "concepts": ["interface", "usability"], "ideal_length": 100},
-        {"q": "Explain what a message queue is and when to use it.", "keywords": ["async", "producer", "consumer", "decoupling", "reliability"], "concepts": ["architecture", "scalability"], "ideal_length": 95},
-    ],
+with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
+    ROLE_DATA = json.load(f)['roles']
 
-    "Consultant": [
-        {
-            "q": "A client's revenue dropped 20 percent last quarter. How do you diagnose the problem?",
-            "keywords": ["revenue", "volume", "price", "market", "competition", "internal", "external", "segment"],
-            "concepts": ["structure the problem", "price times volume", "internal vs external", "hypothesis", "data"],
-            "common_mistakes": ["jumping to solutions", "no framework", "only one cause explored"],
-            "ideal_length": 120
-        },
-        {
-            "q": "How would you estimate the number of petrol stations in the UAE?",
-            "keywords": ["population", "cars", "frequency", "capacity", "assumption"],
-            "concepts": ["top down", "bottom up", "sanity check", "decompose", "per day", "litres"],
-            "common_mistakes": ["no clear assumptions", "no structure", "no sanity check at end"],
-            "ideal_length": 100
-        },
-        {
-            "q": "A retail bank wants to enter the UAE wealth management market. Should they?",
-            "keywords": ["market size", "competition", "capabilities", "regulation", "risk", "synergies"],
-            "concepts": ["market attractiveness", "competitive advantage", "fit", "recommendation", "pros cons"],
-            "common_mistakes": ["no clear recommendation", "ignoring competition", "no capability assessment"],
-            "ideal_length": 120
-        },
-        {
-            "q": "How would you prioritize a backlog of 50 features for a product team?",
-            "keywords": ["impact", "effort", "roi", "stakeholder", "moscow", "ice", "rice"],
-            "concepts": ["framework", "value", "cost", "dependency", "align", "quick wins"],
-            "common_mistakes": ["no framework mentioned", "ignoring stakeholders", "no effort assessment"],
-            "ideal_length": 100
-        },
-        {
-            "q": "A manufacturing company's costs increased 15% year-over-year. Where do you look?",
-            "keywords": ["cogs", "fixed", "variable", "supplier", "labour", "volume", "efficiency"],
-            "concepts": ["break down cost", "benchmark", "internal vs external", "root cause", "unit cost"],
-            "common_mistakes": ["no cost breakdown", "jumping to one cause", "no benchmarking mentioned"],
-            "ideal_length": 100
-        },
-        {
-            "q": "Walk me through a go-to-market strategy for a new SaaS product.",
-            "keywords": ["icp", "channel", "pricing", "positioning", "cac", "ltv", "pilot"],
-            "concepts": ["target customer", "value proposition", "sales motion", "metrics", "iteration"],
-            "common_mistakes": ["skipping the customer definition", "no pricing model", "no success metrics"],
-            "ideal_length": 120
-        },
-        {"q": "A company's market share declined from 30% to 22 percent in 2 years. What's your analysis?", "keywords": ["competition", "pricing", "product", "market", "customer satisfaction"], "concepts": ["market analysis", "strategy"], "ideal_length": 120},
-        {"q": "How would you enter a new geographic market?", "keywords": ["research", "adaptation", "localization", "partners", "risks"], "concepts": ["expansion strategy", "entry mode"], "ideal_length": 110},
-        {"q": "A SaaS company is considering a price increase. How would you decide?", "keywords": ["elasticity", "churn", "arr", "customer", "value"], "concepts": ["pricing strategy", "financial impact"], "ideal_length": 100},
-        {"q": "What is operational excellence and how do you measure it?", "keywords": ["efficiency", "cost", "quality", "cycle time", "waste"], "concepts": ["operations", "kpi"], "ideal_length": 100},
-        {"q": "How would you turn around a declining business unit?", "keywords": ["diagnosis", "action plan", "stakeholder", "timeline", "metrics"], "concepts": ["turnaround strategy", "change management"], "ideal_length": 120},
-        {"q": "A retail company wants to move to e-commerce. What's your approach?", "keywords": ["digital", "channel", "operations", "customer", "investment"], "concepts": ["transformation", "business model"], "ideal_length": 115},
-        {"q": "Estimate the TAM (Total Addressable Market) for an AI chatbot startup.", "keywords": ["market size", "segments", "bottom-up", "top-down", "assumptions"], "concepts": ["market analysis", "sizing"], "ideal_length": 100},
-        {"q": "How would you improve customer retention for a telecom company?", "keywords": ["churn", "loyalty", "engagement", "value", "service"], "concepts": ["retention strategy", "customer lifetime value"], "ideal_length": 100},
-        {"q": "A manufacturing company wants to automate its factory. How do you approach it?", "keywords": ["roi", "capital", "labor", "risk", "timeline"], "concepts": ["investment decision", "change management"], "ideal_length": 110},
-        {"q": "What does a good business strategy look like?", "keywords": ["vision", "goals", "competitive advantage", "execution", "measurement"], "concepts": ["strategy framework"], "ideal_length": 100},
-        {"q": "How would you analyze competitor pricing?", "keywords": ["value", "positioning", "market", "segment", "elasticity"], "concepts": ["competitive analysis", "pricing strategy"], "ideal_length": 95},
-        {"q": "Describe how you'd measure the success of a digital transformation.", "keywords": ["kpi", "adoption", "efficiency", "revenue", "timeline"], "concepts": ["metrics", "outcomes"], "ideal_length": 100},
-        {"q": "A company has high employee turnover. What's your diagnostic?", "keywords": ["engagement", "compensation", "culture", "growth", "management"], "concepts": ["hr strategy", "root cause"], "ideal_length": 100},
-        {"q": "How would you develop a go-to-market strategy for a B2B product?", "keywords": ["icp", "channel", "sales", "marketing", "pricing"], "concepts": ["gtm strategy", "execution"], "ideal_length": 110},
-        {"q": "What is blue ocean strategy? Give an example.", "keywords": ["uncontested market", "value innovation", "differentiation", "cost"], "concepts": ["strategy framework", "competition"], "ideal_length": 95},
-    ],
-
-    "Data Analyst": [
-        {
-            "q": "What is the difference between INNER JOIN, LEFT JOIN, and FULL OUTER JOIN?",
-            "keywords": ["matching rows", "null", "all rows", "intersection", "foreign key", "table"],
-            "concepts": ["only matched", "keep left", "keep all", "missing values", "when to use each"],
-            "common_mistakes": ["only defining one type", "no use case", "no null handling mention"],
-            "ideal_length": 90
-        },
-        {
-            "q": "You run an A/B test. p < 0.05 but the effect size is tiny. Do you ship?",
-            "keywords": ["statistical significance", "practical significance", "effect size", "sample size", "cost"],
-            "concepts": ["business impact", "confidence", "cost to ship", "context matters", "lift"],
-            "common_mistakes": ["just saying yes because p < 0.05", "ignoring business context", "no nuance"],
-            "ideal_length": 90
-        },
-        {
-            "q": "Explain the difference between correlation and causation with an example.",
-            "keywords": ["confounding", "experiment", "rct", "observational", "spurious"],
-            "concepts": ["does not imply", "third variable", "randomized", "controlled", "real example"],
-            "common_mistakes": ["no example", "no confounding mention", "no path to causation"],
-            "ideal_length": 90
-        },
-        {
-            "q": "How would you detect and handle outliers in a dataset?",
-            "keywords": ["iqr", "z-score", "boxplot", "domain knowledge", "cap", "remove"],
-            "concepts": ["detection method", "investigate why", "business context", "impact on model"],
-            "common_mistakes": ["only removing outliers", "no detection method", "ignoring domain context"],
-            "ideal_length": 90
-        },
-        {
-            "q": "You have 30% missing values in a key column. What do you do?",
-            "keywords": ["mcar", "mar", "mnar", "imputation", "drop", "flag", "mean", "median"],
-            "concepts": ["why missing", "mechanism", "strategy", "risk", "model impact"],
-            "common_mistakes": ["just dropping rows", "no mechanism analysis", "no risk discussion"],
-            "ideal_length": 100
-        },
-        {
-            "q": "Walk me through how you would build a dashboard for a sales team.",
-            "keywords": ["kpi", "audience", "granularity", "refresh", "filter", "tool", "stakeholder"],
-            "concepts": ["understand user", "choose metrics", "data source", "design", "iterate"],
-            "common_mistakes": ["jumping to tools", "no stakeholder mention", "no iteration"],
-            "ideal_length": 100
-        },
-        {
-            "q": "Explain what a p-value is in plain English. What are common misconceptions?",
-            "keywords": ["null hypothesis", "probability", "threshold", "false positive"],
-            "concepts": ["not probability of hypothesis", "not proof", "threshold arbitrary", "type 1 error"],
-            "common_mistakes": ["saying it proves the hypothesis", "no misconception", "too technical"],
-            "ideal_length": 90
-        },
-    ],
-
-    "UI Designer": [
-        {
-            "q": "Walk me through your end-to-end design process for a new feature.",
-            "keywords": ["research", "wireframe", "prototype", "iterate", "handoff", "test", "feedback"],
-            "concepts": ["discovery", "ideation", "low fidelity", "high fidelity", "user testing", "dev"],
-            "common_mistakes": ["skipping research", "no testing step", "no handoff mention"],
-            "ideal_length": 120
-        },
-        {
-            "q": "How do you design for accessibility? Give three concrete examples.",
-            "keywords": ["wcag", "contrast", "alt text", "keyboard", "screen reader", "focus"],
-            "concepts": ["colour contrast ratio", "tab navigation", "semantic html", "aria labels", "inclusive"],
-            "common_mistakes": ["less than 3 examples", "vague examples", "no WCAG mention"],
-            "ideal_length": 100
-        },
-        {
-            "q": "How would you redesign a checkout flow with 70 percent cart abandonment?",
-            "keywords": ["friction", "steps", "trust", "guest checkout", "autofill", "error", "progress"],
-            "concepts": ["reduce steps", "clear errors", "trust signals", "test", "metric", "heuristic"],
-            "common_mistakes": ["no diagnosis before solution", "no success metric", "generic suggestions"],
-            "ideal_length": 120
-        },
-        {
-            "q": "What is a design system and what are its benefits and trade-offs?",
-            "keywords": ["component", "token", "consistency", "scalability", "maintenance", "adoption"],
-            "concepts": ["shared language", "speed", "brand", "rigidity", "cost to build", "governance"],
-            "common_mistakes": ["only benefits no trade-offs", "no concrete examples", "too vague"],
-            "ideal_length": 100
-        },
-        {
-            "q": "When should you use a modal dialog and when should you avoid it?",
-            "keywords": ["interrupt", "focus", "context", "dismiss", "confirmation", "accessibility"],
-            "concepts": ["blocking interaction", "critical action", "mobile", "cognitive load", "alternatives"],
-            "common_mistakes": ["no when to avoid", "no accessibility mention", "no alternatives"],
-            "ideal_length": 90
-        },
-        {
-            "q": "What is the difference between UX and UI? Why does the distinction matter?",
-            "keywords": ["research", "flow", "information architecture", "visual", "interaction", "usability"],
-            "concepts": ["experience vs interface", "user journey", "aesthetics", "function", "overlap"],
-            "common_mistakes": ["too brief", "no concrete example", "saying they are the same"],
-            "ideal_length": 90
-        },
-        {"q": "How would you redesign a legacy interface for mobile?", "keywords": ["responsive", "touch", "navigation", "hierarchy", "testing"], "concepts": ["mobile design", "user research"], "ideal_length": 100},
-        {"q": "Explain the importance of typography in UI design.", "keywords": ["hierarchy", "readability", "contrast", "weight", "spacing"], "concepts": ["visual design", "ux"], "ideal_length": 85},
-        {"q": "How would you design an onboarding flow for a complex product?", "keywords": ["tutorial", "progressive disclosure", "context", "feedback"], "concepts": ["user education", "first impression"], "ideal_length": 100},
-        {"q": "Describe your approach to designing for users with disabilities.", "keywords": ["wcag", "contrast", "keyboard", "screen reader", "testing"], "concepts": ["inclusive design", "accessibility"], "ideal_length": 95},
-        {"q": "How do you decide between modal and non-modal dialogs?", "keywords": ["focus", "urgency", "context", "interruption"], "concepts": ["interaction design", "user flow"], "ideal_length": 85},
-        {"q": "How would you improve a navigation system with 50+ pages?", "keywords": ["information architecture", "hierarchy", "search", "breadcrumb"], "concepts": ["ia", "wayfinding"], "ideal_length": 100},
-        {"q": "Describe your process for validating a design with users.", "keywords": ["testing", "prototype", "feedback", "iteration", "insights"], "concepts": ["user research", "validation"], "ideal_length": 95},
-        {"q": "How do you handle conflicting feedback from stakeholders?", "keywords": ["data", "user research", "compromise", "reasoning"], "concepts": ["design thinking", "stakeholder management"], "ideal_length": 90},
-        {"q": "What is the role of color in UI design?", "keywords": ["psychology", "contrast", "meaning", "consistency", "brand"], "concepts": ["visual design", "emotion"], "ideal_length": 85},
-        {"q": "How would you design an error state for a form?", "keywords": ["clarity", "recovery", "guidance", "location", "tone"], "concepts": ["ux writing", "error handling"], "ideal_length": 85},
-        {"q": "Explain the concept of mental models in design.", "keywords": ["user expectation", "conceptual", "learning", "intuitive"], "concepts": ["psychology", "usability"], "ideal_length": 90},
-        {"q": "How do you balance aesthetics and functionality?", "keywords": ["visual design", "usability", "brand", "performance"], "concepts": ["design discipline", "trade-offs"], "ideal_length": 85},
-        {"q": "What is dark mode design and what are its challenges?", "keywords": ["contrast", "readability", "battery", "preference", "consistency"], "concepts": ["design variant", "user preference"], "ideal_length": 90},
-    ]
-}
-
-# Phrases that genuinely indicate an example was given.
-# ("like" alone is excluded on purpose -- too common a filler word
-# and triggers false positives, e.g. "I would like to use a hash map")
-EXAMPLE_MARKERS = [
-    "for example", "for instance", "such as", "e.g.", "like when",
-    "in particular", "in my experience", "i once", "i worked on",
-    "a case where", "imagine", "consider a", "say a company", "say a user"
-]
-
+QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
 #word/phrases tht suggest the answer acc organized rather than js a wall of txt, used to score "structure" seprately from content
 STRUCTURE_MARKERS = [
     "first", "second", "third", "finally", "however",
@@ -292,6 +31,7 @@ STRUCTURE_MARKERS = [
 _recent: dict = {}
 # tracks per-user score history: {user_id: {"points": [...], "by_role": {role: [...]}}}
 _user_scores: dict = {}
+
 
 
 @app.route('/')
@@ -320,8 +60,8 @@ def get_question():
     pool = QUESTIONS[role]
     last = _recent.get(role)
     # filter out whatever question was shown last time so it doesn't repeat back to back
-    # "or pool" is the fallback: if filtering leaves nthin (pool only had 1 question)
-    # fall back to the full pool so random.choice nvr gets an empty list
+    # "or pool" is a fallback: if filtering leaves nthin (pool only had 1 question)
+    # fall back to a full pool so random.choice nvr gets an empty list
     available = [q for q in pool if q['q'] != last] or pool
     chosen = random.choice(available)
     _recent[role] = chosen['q']
@@ -353,7 +93,7 @@ def submit():
     feedback, points, breakdown = grade(role, answer, question)
 
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
-    # setdefault creates the entry on first submit and just returns it on later ones
+    # setdefault creates the entry on first submit and js returns it on later ones (it rotates the entries ig)
     user_record['points'].append(points)
     user_record['by_role'].setdefault(role, []).append(points)
 
@@ -369,9 +109,7 @@ def submit():
 def get_status():
     user_id = request.args.get('user', 'anonymous')
     score_data = _user_scores.get(user_id)
-
     if not score_data or not score_data['points']:
-        # covers both a brand new user and one that exists but hasn't answered anything yet
         return jsonify({'score': 0, 'answered': 0, 'average': 0, 'by_role': {}})
 
     total = sum(score_data['points'])
@@ -387,13 +125,13 @@ def get_status():
 
 
 def grade(role: str, answer: str, question: str) -> tuple:
-    # find the metadata dict matching the exact question text that was asked so we know wich keywords to check the answer against
+    # find the metadata dict matching the exact question txt tht was asked so we know wich keywords to check the answer against
     meta = next(
         (q for q in QUESTIONS.get(role, []) if q['q'] == question),
         None
     )
     if not meta:
-        # question wasnt found so fall back to a gadin scheme that only looks at length and examples
+        # question wasnt found so fall back to a gradin scheme that only looks at length and examples
         return basic_grade(answer)
 
     answer_lower = answer.lower()
@@ -606,16 +344,23 @@ def health():
 
 
 if __name__ == '__main__':
+    @app.route('/roles')
+    def get_roles():
+    #sends the frontend everything it needs to build role btns:
+        return jsonify([
+            {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
+            for role, data in ROLE_DATA.items()
+    ])
     # only runs when this file executed directly (not when imported), so importing app.py elsewhere won't accidentally spin up the sevrer
-    print("\n" + "=" * 52)
-    print(" unJ0bless Backend")
-    print("=" * 52)
-    print(" URL    -> http://localhost:8000")
-    print(" Health -> http://localhost:8000/health")
-    print(" Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
-    print(f" Roles  -> {', '.join(QUESTIONS.keys())}")
-    print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
-    print("=" * 52 + "\n")
-    app.run(debug=True, port=8000)
-    # debug = True gives aut-reload on save and a live traceback in-browser on errors
-    # fine for local dev, should be off b4 this ever goes near production
+print("\n" + "=" * 52)
+print(" unJ0bless Backend")
+print("=" * 52)
+print(" URL    -> http://localhost:8000")
+print(" Health -> http://localhost:8000/health")
+print(" Grader -> http://localhost:8000/submit (im sigma enough to not use AI gng)")
+print(f" Roles  -> {', '.join(QUESTIONS.keys())}")
+print(f" Total Questions -> {sum(len(v) for v in QUESTIONS.values())}")
+print("=" * 52 + "\n")
+app.run(debug=True, port=8000)
+        # debug = True gives aut-reload on save and a live traceback in-browser on errors
+        # fine for local dev, should be off b4 this ever goes near production

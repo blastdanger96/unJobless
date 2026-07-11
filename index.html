@@ -20,27 +20,7 @@
     <!-- STEP 1: CHOOSE ROLE -->
     <div class="box">
         <div class="box-label">STEP 1 — CHOOSE YOUR ROLE</div>
-        <div class="role-grid">
-
-            <button class="role-btn" onclick="selectRole(this, 'Software Engineer')">
-                💻 Software Engineer
-                <span>DSA, system design, coding</span>
-            </button>
-
-            <button class="role-btn" onclick="selectRole(this, 'Consultant')">
-                📋 Manager & Consultant
-                <span>Strategy, metrics, cases</span>
-            </button>
-
-            <button class="role-btn" onclick="selectRole(this, 'Data Analyst')">
-                📊 Data Analyst
-                <span>SQL, statistics, case structure</span>
-            </button>
-
-            <button class="role-btn" onclick="selectRole(this, 'UI Designer')">
-                🎨 UX & UI Designer
-                <span>Design thinking, critique</span>
-            </button>
+        <div class="role-grid" id="role-grid">
 
         </div>
     </div>
@@ -57,6 +37,9 @@
             rows="6"
             placeholder="Type your answer here...">
         </textarea>
+        <div class="box-label" id="word-count-label">
+            <span id="word-count">0 Words</span>
+        </div>
     </div>
 
     <!-- SUBMIT BUTTON -->

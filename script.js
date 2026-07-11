@@ -2,10 +2,6 @@
 let selectedRole = null;
 
 
-/**
- * FIX #1: Changed function name from "setRole" to "selectRole" 
- * to match the onclick="selectRole(...)" in HTML line 25
- */
 // btn is passed in so we can toggle the "selected" class on the exact
 // btn tht was clicked, rather than re-querrying the DOM for it
 async function selectRole(btn, role) {
@@ -20,6 +16,24 @@ async function selectRole(btn, role) {
     // Load question when role is selected
     await loadQuestion(role);
 }
+
+/**
+ * Impliments the code for buttons on frontend in case of expanding roles
+ */
+async function loadRoles() {
+    const res = await fetch('/roles');
+    const roles = await res.json();
+    const grid = document.getElementById('role-grid');
+
+    grid.innerHTML = roles.map(r => `
+        <button class="role-btn" onclick="selectRole(this, '${r.name}')">
+            ${r.emoji} ${r.name}
+            <span>${r.tagline}</span>
+        </button>
+    `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadRoles);
 
 /**
  * Load question from backend
