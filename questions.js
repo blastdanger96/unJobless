@@ -138,9 +138,9 @@ async function submitAnswer() {
     }
 
     stopTimer();
+    
     const btn = document.getElementById('submit-btn');
 
-    const btn = document.getElementById('submit-btn');
     btn.disabled = true;
     btn.textContent = '...gradin ts...';
     // disabling + relabeling the button gives feedback that the click registered and stops a double-submit while the request is in flight
