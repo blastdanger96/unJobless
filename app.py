@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 import random
 import json
 import os
+#os is a lib for interaction of file explorer
 
 app = Flask(__name__, static_folder='.')
 
@@ -52,7 +53,8 @@ def get_question():
     pool = QUESTIONS[role]
     last = _recent.get(role)
 
-    # Exclude last question to avoid immediate repeats; fallback to full pool if only 1 question exists
+    # Exclude last question to avoid immediate repeats
+    # Fallback to full pool if only 1 question exists
     available = [q for q in pool if q['q'] != last] or pool
     chosen = random.choice(available)
     _recent[role] = chosen['q']
@@ -70,7 +72,7 @@ def submit():
     answer = body.get('answer', '').strip()
     user_id = body.get('user_id', 'anonymous').strip() or 'anonymous'
     question = _recent.get(role, '')
-
+    # measuring the length of the answer to grasp it's worthyness
     if role not in QUESTIONS:
         return jsonify({'error': 'Invalid role'}), 400
     if len(answer) < 20:
@@ -81,7 +83,7 @@ def submit():
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
     user_record['points'].append(points)
     user_record['by_role'].setdefault(role, []).append(points)
-
+    # returns the graded answer to the frontend
     return jsonify({
         'feedback': feedback,
         'points': points,
@@ -123,14 +125,14 @@ def grade(role: str, answer: str, question: str) -> tuple:
     word_count = len(words)
     ideal_length = meta.get('ideal_length', 80)
 
-    # --- Length score (0-2) ---
+    # <--- Length score (0-2) --->
     length_score = 0
     if word_count >= ideal_length:
         length_score = 2
     elif word_count >= ideal_length * 0.6:
         length_score = 1
 
-    # --- Keyword score (0-2) ---
+    # <--- Keyword score (0-2) --->
     keywords = meta.get('keywords', [])
     keyword_hits = [k for k in keywords if k.lower() in answer_lower]
     keyword_score = 0
@@ -141,7 +143,7 @@ def grade(role: str, answer: str, question: str) -> tuple:
         elif ratio >= 0.2:
             keyword_score = 1
 
-    # --- Concept score (0-2) ---
+    # <--- Concept score (0-2) --->
     concepts = meta.get('concepts', [])
     concept_hits = [c for c in concepts if c.lower() in answer_lower]
     concept_score = 0
@@ -152,15 +154,15 @@ def grade(role: str, answer: str, question: str) -> tuple:
         elif ratio >= 0.2:
             concept_score = 1
 
-    # --- Structure score (0-2) ---
+    # <--- Structure score (0-2) --->
     structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
     structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
 
-    # --- Example score (0-2) ---
+    # <--- Example score (0-2) --->
     has_example = any(m in answer_lower for m in EXAMPLE_MARKERS)
     example_score = 2 if has_example else 0
 
-    # Weighted composite: keywords/concepts matter most (30% each), length 20%, structure/examples 10% each
+    # Weighted composite: keywords/concepts matters 50%, length matters 30%, structure/examples matters 20% 
     raw = (
         length_score * 0.2 +
         keyword_score * 0.3 +
