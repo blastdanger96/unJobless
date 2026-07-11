@@ -19,3 +19,4 @@ function selectRole(role) {
 }
 
 document.addEventListener('DOMContentLoaded', loadRoles);
+

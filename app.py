@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 import random
 import json
 import os
-#os is a lib for interaction of file explorer
+#os is a lib for interaction withj file explorer
 
 app = Flask(__name__, static_folder='.')
 
@@ -68,7 +68,7 @@ def get_question():
 
     difficulty = get_difficulty(chosen.get('ideal_length', 80))
 
-    return jsonify({'question': chosen['q'], 'role': role, 'difficutly': difficulty})
+    return jsonify({'question': chosen['q'], 'role': role, 'difficulty': difficulty})
 
 
 @app.route('/submit', methods=['POST'])

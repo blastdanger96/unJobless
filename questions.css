@@ -1,5 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
+:root {
+    --bg: black;
+    --text: white;
+    --test-dim :#666;
+    --text-dimmer: #555;
+    --border: white;
+    --box-bg: #0f0f0f;
+
+}
+[data-theme="light"] {
+    --bg: white;
+    --text: black;
+    --text-dim: #555;
+    --text-dimmer: #666;
+    --border: black;
+    --box-bg:#ffffff;
+}
+
 @font-face {
     font-family: 'Perfect DOS VGA';
     src: url('fonts/PerfectDOSVGA437.woff2') format('woff2');
@@ -12,8 +30,8 @@
 * {margin: 0; padding: 0; box-sizing: border-box}
 
 body {
-    background: #0a0a0a;
-    color: #fff;
+    background: var(--bg);
+    color: var(--text);
     font-family: 'VT323', monospace;
     font-size: 20px;
     min-height: 100vh;
@@ -181,6 +199,24 @@ body {
     color: #e9e9e9;
     letter-spacing: 3px;
     margin-bottom: 14px;
+}
+
+#theme-toggle {
+    border: 2px solid var(-border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    padding: 10px 16px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    transition: background 0.2s, color 0.2s;
+}
+
+#theme-toggle:hover {
+    background: var(--text);
+    color: var(--bg)
 }
 
 #skip-btn {
