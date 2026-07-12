@@ -9,3 +9,17 @@ hero is the first thing the user sees when they gonna land on the index page {un
 .step-body is the title n descirption
 .step baiscally reveals the whole card.
 
+keyframes fadeUp basically tells from what to where (original position) should the elements opacity be changed to have a fadeup effect
+translateY(16px) means move down 16 px n from there to origin
+this ensures a delay is present for each elment so it pops up accordingly
+it should run on every pg and elemnt.
+takes approx. 0.5s
+
+glitch moment is basically an illusion tht the screen is twisting or smth idk how to explain
+here we change the text shadow and shift the text to make the colors look differentiated which happens when glitching
+20% and 40% is main glitchin events while 80% and 100% is back to normal
+it only works with hover tho and for title only takes 0.25s
+it's a lil complex but its whole purpose is to make things look a lil broken on purpose
+
+both are 1 time shi
+

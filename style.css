@@ -194,6 +194,48 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     gap: 20px;
 }
 
+/* SCROL REVEAL EFFECTS */
+.reveal {
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+
+}
+
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp {
+    from {opacity: 0; transform: translateY(15px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+@keyframes glitch {
+    0% {text-shadow:  4px 4px 0 #333; trans: translate(0);}
+    20% {text-shadow: -3px 0 #4caf50, 3px 0 #fff; transform: translate(-2px, 0);}
+    40%{text-shadow: 3px 0 #4caf50, -3px 0 #fff; transform: translate(2px, 0);}
+    60% {text-shadow: -2px 0 #4caf50; transform: translate(-1px, 0);}
+    80% {text-shadow: 4px 4px #333; transform: translate(1px, 0);}
+    100% {text-shadow: 4px 4px 0 #333; transform: translate(0);}
+}
+
+[data-theme='light'] .hero-tagline {color: #555;}
+[data-theme='light'] .about-section p {color: #555;}
+[data-theme='light'] .step-body p {color: #555;}
+[data-theme='light'] .section-label {color: #2b7c2f;}
+[data-theme='light'] .step-num {color: #2b7c2f;}
+[data-theme='light'] body::before {opacity: 0.25;}
+[data-theme='light'] .landing-section {border-top-color: #ddd;}
+[data-theme='light'] .step {border-bottom-color: #e5e5e5;}
+[data-theme='light'] .role-section {color: #ddd;}
+
+
+
+
 
 
 
