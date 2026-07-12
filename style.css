@@ -1,3 +1,4 @@
+
 body::before {
     content: '';
     position: fixed;
@@ -33,7 +34,7 @@ body {
 }
 
 .hero-eyebrow {
-    font-family: 'VT323', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1.5rem;
     color: #4caf50;
     letter-spacing: 5px;
@@ -45,7 +46,7 @@ body {
     font-family: 'Press Start 2P', monospace;
     font-size: clamp(1.5rem, 5vm, 2.5rem);
     letter-spacing: 5px;
-    text-shadow: 5px 5px 0 #333, 0 0 40px rgba(76,175,80,0.15);
+    text-shadow: 5px 5px 0 #9c9c9c, 0 0 40px rgba(76,175,80,0.15);
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.25s;
     line-height: 1.5;
@@ -56,7 +57,7 @@ body {
     animation: fadeUp 0s, glitch 0.5s ease;
 }
 .hero-tagline {
-    font-family: 'VT323', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     color: #aaa;
     letter-spacing: 5px;
@@ -72,8 +73,21 @@ body {
 
 }
 
-.hero-ceta {
-    font-family: 'Press Start 2P', monospace;
+#typewriter-text {
+    font-family: 'Pixelify Sans', monospace;
+    font-size: 0.7rem;
+    color: #888;
+    letter-spacing: 2.5px;
+    min-height: 1.5rem;
+    display: inline-block;
+}
+
+[data-theme='light'] #typewriter-text {
+    color: #666;
+}
+
+.hero-cta {
+    font-family: 'Pixelify Sans', monospace;
     font-size: 0.5rem;
     color: #444;
     letter-spacing: 5px;
@@ -84,7 +98,7 @@ body {
     border: 1px solid #333;
     background: transparent;
     color: #555;
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Pixelify Sans', monospace;
     font-size: 0.35;
     padding: 12px 14px;
     cursor: pointer;
@@ -111,8 +125,8 @@ body {
 }
 
 .section-label {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.35rem;
+    font-family: 'Pixelify Sans', monospace;
+    font-size: 1.5rem;
     color: #4caf50;
     letter-spacing: 4px;
 }
@@ -129,7 +143,7 @@ body {
 may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be flashed by now and later in tht innocent's life*/
 
 .about-section h2 {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Pixelify Sans Sans', monospace;
     font-size: clamp(0.5rem, 2vm, 1rem);
     letter-spacing: 2.5px;
     line-height: 2;
@@ -137,7 +151,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 }
 
 .about-section p {
-    font-family: 'VT323', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1.5rem;
     color: #888;
     line-height: 1.5;
@@ -162,7 +176,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 .step:last-child {border-bottom:none;}
 
 .step-num {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Pixelify Sans', monospace;
     font-size: 0.5rem;
     color: #4caf50;
     letter-spacing: 2.5px;
@@ -170,14 +184,14 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     padding-top: 5px;
 }
 .step-body h3 {
-    font-family: 'Press Start 2P', monospace;
+    font-family: 'Pixelify Sans', monospace;
     font-size: 0.5rem;
     letter-spacing: 2.5px;
     margin-bottom: 10px;
     line-height: 1.5;
 }
 .step-body p {
-    font-family: 'VT323', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     color: #777;
     letter-spacing: 1px;
@@ -206,7 +220,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     border: 3px solid var(--border);
     background: var(--box-bg);
     color: var(--text);
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Pixelify Sans';
     font-weight: 400;
     padding: 18px 16px;
     cursor: pointer;
@@ -240,7 +254,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 /* SCROL REVEAL EFFECTS */
 .reveal {
     opacity: 0;
-    transform: translateY(15px);
+    transform: translateY(7.5px);
     transition: opacity 0.5s ease, transform 0.5s ease;
 
 }
@@ -275,6 +289,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 [data-theme='light'] .landing-section {border-top-color: #ddd;}
 [data-theme='light'] .step {border-bottom-color: #e5e5e5;}
 [data-theme='light'] .role-section {color: #ddd;}
+
 [data-theme='light'] .role-btn {
     border-color: var(--border);
     background: var(--box-bg);
@@ -299,7 +314,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     display: flex;
     justify-content: space-between;
     color: #dedede;
-    font-family: 'Press Start 2P', cursive;
+    font-family: 'Pixelify Sans', cursive;
     font-size: 0.45rem; /* Slightly scaled down so it fits comfortably inside the box */
     line-height: 1.4;
     letter-spacing: 0px; /* Reset spacing so letters don't drift apart */
