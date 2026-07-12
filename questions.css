@@ -95,61 +95,6 @@ body {
 
 .back:hover {color: #fff;}
 
-.role-grid {
-    display: grid;
-    /** auto-fit + minmax lets the grid decide how many columns fit per row:
-       as many 280px-minimum columns as fit, each stretching evenly (1fr)
-       to fill leftover space. this is what makes it responsive without
-       a media query */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-.role-btn {
-    border: 3px solid #fff;
-    background: #0a0a0a;
-    color: #fff;
-    font-family: 'Press Start 2P', cursive;
-    font-weight: 400;
-    padding: 18px 16px;
-    cursor: pointer;
-    letter-spacing: 0.5px;
-    text-align: left;
-    /* left-align since buttons contain a title + subtitle stacked vertically, not a single centered label*/
-    transition: background 0.1s, color 0.1s, transform 0.05s;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.role-btn span {
-    font-size: 0.8rem;
-    color: #666;
-    letter-spacing: 1px;
-}
-
-.role-btn:hover {
-    background: #fff;
-    color: #0a0a0a;
-    /* inverts the color scheme on hover instead of just dimming matches the high-contrast terminal aesthetic */
-}
-
-.role-btn:hover span {
-    color: #555;
-}
-
-.role-btn.selected {
-    background: #fff;
-    color: #0a0a0a;
-    border-color: #fff;
-    
-}
-
-.role-btn:active {
-    transform: scale(0.98);
-}
-
 .dialog-box, #feedback-box {
     width: 100%;
     max-width: 680px;
@@ -189,11 +134,11 @@ body {
 
 .box-label {
     font-family: 'Press Start 2P', cursive;
-    font-size: 0.85rem; /* Slightly scaled down so it fits comfortably inside the box */
-    letter-spacing: 0px; /* Reset spacing so letters don't drift apart */
+    font-size: 0.4rem;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
     font-weight: 400;
     text-shadow: 4px 4px 0 #202020;
-    letter-spacing: 0.05em;
     color: #e9e9e9;
     margin-bottom: 14px;
 }

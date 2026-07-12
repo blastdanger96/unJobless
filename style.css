@@ -194,6 +194,49 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     gap: 20px;
 }
 
+/* ROLE GRID & BUTTONS — used on index.html for role selection */
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.role-btn {
+    border: 3px solid var(--border);
+    background: var(--box-bg);
+    color: var(--text);
+    font-family: 'Press Start 2P', cursive;
+    font-weight: 400;
+    padding: 18px 16px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    text-align: left;
+    transition: background 0.1s, color 0.1s, transform 0.05s;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.role-btn span {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+}
+
+.role-btn:hover {
+    background: var(--text);
+    color: var(--bg);
+}
+
+.role-btn:hover span {
+    color: var(--text-dimmer);
+}
+
+.role-btn:active {
+    transform: scale(0.98);
+}
+
 /* SCROL REVEAL EFFECTS */
 .reveal {
     opacity: 0;
@@ -232,6 +275,42 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 [data-theme='light'] .landing-section {border-top-color: #ddd;}
 [data-theme='light'] .step {border-bottom-color: #e5e5e5;}
 [data-theme='light'] .role-section {color: #ddd;}
+[data-theme='light'] .role-btn {
+    border-color: var(--border);
+    background: var(--box-bg);
+    color: var(--text);
+}
+[data-theme='light'] .role-btn span {
+    color: var(--text-dim);
+}
+[data-theme='light'] .role-btn:hover,
+[data-theme='light'] .role-btn:active {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+}
+[data-theme='light'] .role-btn:hover span {
+    color: var(--text-dimmer);
+}
+
+.footer {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    justify-content: space-between;
+    color: #dedede;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 0.45rem; /* Slightly scaled down so it fits comfortably inside the box */
+    line-height: 1.4;
+    letter-spacing: 0px; /* Reset spacing so letters don't drift apart */
+    text-shadow: 4px 4px 0 #676767;
+    font-weight: 400;
+    padding-top: 25px;
+    border-top: 2px solid #1a1a1a;
+    letter-spacing: 2px;
+    margin-top: 50px;
+
+}
 
 
 
