@@ -101,7 +101,7 @@ body {
 }
 
 .landing-section {
-    width: 1005;
+    width: 100%;
     max-width: 800px;
     border-top: 1px solid #1c1c1c;
     padding: 60px 20px;
@@ -173,7 +173,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     font-family: 'Press Start 2P', monospace;
     font-size: 0.5rem;
     letter-spacing: 2.5px;
-    margin-bottom: 10x;
+    margin-bottom: 10px;
     line-height: 1.5;
 }
 .step-body p {
@@ -215,7 +215,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 }
 
 @keyframes glitch {
-    0% {text-shadow:  4px 4px 0 #333; trans: translate(0);}
+    0% {text-shadow:  4px 4px 0 #333; transform: translate(0);}
     20% {text-shadow: -3px 0 #4caf50, 3px 0 #fff; transform: translate(-2px, 0);}
     40%{text-shadow: 3px 0 #4caf50, -3px 0 #fff; transform: translate(2px, 0);}
     60% {text-shadow: -2px 0 #4caf50; transform: translate(-1px, 0);}

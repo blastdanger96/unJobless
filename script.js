@@ -20,6 +20,14 @@ function selectRole(role) {
 // dark/light theme btn 
 let currentlyTheme = 'dark'
 
+function loadTheme() {
+    const saved = localStorage.getItem('unjobless-theme');
+    if (saved) {
+        currentlyTheme = saved;
+        document.documentElement.setAttribute('data-theme', saved);
+    }
+}
+
 async function btnTheme() {
    currentlyTheme = currentlyTheme === 'dark' ? 'light' : 'dark';
    document.documentElement.setAttribute('data-theme', currentlyTheme);
@@ -38,7 +46,7 @@ function runTypewriting() {
 
     function type() {
         if (i< text.length) {
-            el.innerHTML = text.slice(0,i+1) + '<span classs="typerwriter-cursor">_</span>';
+            el.innerHTML = text.slice(0,i+1) + '<span class="typewriter-cursor">_</span>';
             i++;
             setTimeout(type,55);
 

@@ -213,11 +213,11 @@ async function nextQuestion() {
     await loadQuestion();
 }
 
-async function skikQuestion() {
+async function skipQuestion() {
     stopTimer();
-    document.getElementById('user-answer').value = null;
+    document.getElementById('user-answer').value = '';
     document.getElementById('word-count').textContent = '0';
-    document.getElementById('word-count-label').className = null;
+    document.getElementById('word-count-label').className = '';
 
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
