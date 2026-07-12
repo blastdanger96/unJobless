@@ -34,21 +34,166 @@ body {
 
 .hero-eyebrow {
     font-family: 'VT323', monospace;
-    font-size: 1.1rem;
+    font-size: 1.5rem;
     color: #4caf50;
-    letter-spacing: 4px;
+    letter-spacing: 5px;
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.1s
 
 }
 .hero h1 {
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(1.6rem, 5vm, 3rem);
-    letter-spacing: 6px;
-    text-shadow: 4px 4px 0 #333, 0 0 40px rgba(76,175,80,0.15);
+    font-size: clamp(1.5rem, 5vm, 2.5rem);
+    letter-spacing: 5px;
+    text-shadow: 5px 5px 0 #333, 0 0 40px rgba(76,175,80,0.15);
     opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.25s;
-    line-height: 1.4;
+    animation: fadeUp 0.5s ease forwards 0.25s;
+    line-height: 1.5;
     cursor: default;
     transition: text-shadow 0.1s;
 }
+.hero h1:hover {
+    animation: fadeUp 0s, glitch 0.5s ease;
+}
+.hero-tagline {
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    color: #aaa;
+    letter-spacing: 5px;
+    min-height: 5rem;
+    opacity: 0;
+    animation: fadeUp 0.5s ease forwards 0.5s;
+}
+
+.typewriter-cursor {
+    display: inline-block;
+    color: #4caf50;
+    animation: blink 1s step-end;
+
+}
+
+.hero-ceta {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    color: #444;
+    letter-spacing: 5px;
+    animation: fadeUp 0.5s ease forwards 1s;
+}
+
+#theme-toggle {
+    border: 1px solid #333;
+    background: transparent;
+    color: #555;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.35;
+    padding: 12px 14px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: border-color 0.2s, color 0.2s;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 1.9s;
+}
+
+#theme-toggle:hover {
+    border-color: white;
+    color: white;
+
+}
+
+.landing-section {
+    width: 1005;
+    max-width: 800px;
+    border-top: 1px solid #1c1c1c;
+    padding: 60px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.section-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.35rem;
+    color: #4caf50;
+    letter-spacing: 4px;
+}
+
+/* FOR THO LEGEND WHO DECIDED TO READ MY CODE AND SUTUMBLED UPON TILL HERE, I AM PROUD OF YOU
+                I RESPECT YOUR EFFORTS BUT SHALL WARN THY SOUL
+        LIGHT MODE HAS BEEN MADE FOR A BOOMER UNLIKE ONESELF READING (hopefully)
+            IT SHALL BE STERNLY ADVICED TO WEAR SUNGLASSES 
+                    BEFOREHAND OPENING THIS MONSTORCITY
+            SHALL IT BE YOU DO NOT TAKE THIS WISE MAN'S ADVICE
+                    I WILL NOT BE RESPONISBLE FOR ANY DAMAGES
+                    COPYRIGHTS, OR OCCURENCES HEREAFTER
+
+may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be flashed by now and later in tht innocent's life*/
+
+.about-section h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(0.5rem, 2vm, 1rem);
+    letter-spacing: 2.5px;
+    line-height: 2;
+    text-shadow: 2.5px 25px 0 #333;
+}
+
+.about-section p {
+    font-family: 'VT323', monospace;
+    font-size: 1.5rem;
+    color: #888;
+    line-height: 1.5;
+    letter-spacing: 1px;
+    max-width: 640px;
+
+}
+
+.steps {
+    display: flex;
+    flex-direction: column;
+    margin-top: 15px;
+}
+
+.step {
+    display: flex;
+    gap: 25px;
+    align-items: flex-end;
+    padding: 25px 0;
+    border-bottom: 1px solid #111;
+}
+.step:last-child {border-bottom:none;}
+
+.step-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    color: #4caf50;
+    letter-spacing: 2.5px;
+    min-width: 25px;
+    padding-top: 5px;
+}
+.step-body h3 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 2.5px;
+    margin-bottom: 10x;
+    line-height: 1.5;
+}
+.step-body p {
+    font-family: 'VT323', monospace;
+    font-size: 1rem;
+    color: #777;
+    letter-spacing: 1px;
+    line-height: 1.5;
+}
+
+.role-section {
+    width: 100%;
+    max-width: 800px;
+    border-top: 1px solid #1c1c1c;
+    padding: 50px 25px 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+
+
+

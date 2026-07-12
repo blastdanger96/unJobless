@@ -1,2 +1,11 @@
 hii this for notestakin purposes. pls ignore.
 
+hero is the first thing the user sees when they gonna land on the index page {unJobless title}
+.hero-eyebrow is the txt "powered by gen Z. for gen Z"
+.hero-tagline is "no bs AI interview prep lock in"
+.hero-ceta scroll to start
+
+.step-num is the sr. no. (like 1, 2, 3 and 4 steps ykyk)
+.step-body is the title n descirption
+.step baiscally reveals the whole card.
+
