@@ -1,0 +1,21 @@
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Serving Flask app 'app'
+ * Debug mode: on
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8000
+[33mPress CTRL+C to quit[0m
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+127.0.0.1 - - [13/Jul/2026 00:56:55] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:56:58] "GET /roles HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:00] "GET /question?role=Software%20Engineer HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:03] "POST /submit HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:05] "POST /submit HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:09] "POST /submit HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:15] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:17] "GET /style.css HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:19] "[33mGET /fonts/PerfectDOSVGA437.woff2 HTTP/1.1[0m" 404 -
+127.0.0.1 - - [13/Jul/2026 00:57:21] "GET /roles HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:23] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2026 00:57:27] "GET /status?user=test HTTP/1.1" 200 -

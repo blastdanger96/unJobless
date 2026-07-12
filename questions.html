@@ -30,7 +30,7 @@
             LOADING....<span class="cursor">_</span>
         </div>
         <div id="timer-box">
-            <span id="timer-display">1:30</span>
+            <span id="timer-display"> </span>
             <div class="timer-track">
                 <div class="timer-fill" id="timer-fill"></div>
             </div>
@@ -41,7 +41,7 @@
         <div class="box-label">
             <span>YOUR ANSWER</span>
             <span id="word-count-label">
-                <span id="word-count">0 WORDS</span>
+                <span id="word-count">0</span>
             </span>
         </div>
         <textarea id="user-answer" rows="7"
@@ -49,7 +49,7 @@
         </textarea>
     </div>
 
-    <button id="submit-btn" onclick="submitAnswer()">SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS</button>
+    <button id="submit-btn" onclick="submitAnswer()" aria-label="SUBMIT YOUR ANSWER."> GOOD LUCK. MAY THO PASS</button>
     <button id="skip-btn" onclick="skipQuestion()">SKIP THIS QUESTION</button>
 
     <div id="feedback-box" class="hidden">

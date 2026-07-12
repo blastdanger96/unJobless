@@ -8,8 +8,13 @@ app = Flask(__name__, static_folder='.')
 
 QUESTION_FILE = os.path.join(os.path.dirname(__file__), 'questions.json')
 
-with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
-    ROLE_DATA = json.load(f)['roles']
+try:
+
+    with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
+        ROLE_DATA = json.load(f)['roles']
+except FileExistsError:
+    print(f"ERROR:- {QUESTION_FILE} not found. Exiting the website")
+    exit(1)
 
 QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
 
