@@ -1,3 +1,23 @@
+:root {
+    --bg: #0a0a0a;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --text-dimmer: #555;
+    --border: #2a2a2a;
+    --box-bg: #111;
+    --accent: #4caf50;
+}
+
+[data-theme='light'] {
+    --bg: #fafafa;
+    --text: #1a1a1a;
+    --text-dim: #666;
+    --text-dimmer: #999;
+    --border: #ddd;
+    --box-bg: #fff;
+    --accent: #2b7c2f;
+
+}
 
 body::before {
     content: '';
@@ -20,10 +40,14 @@ body {
     linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.012)1px, transparent 1px);
     background-size: 40px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+
 }
 
 .hero {
-    width: 100%;
     max-width: 800px;
     text-align: center;
     padding: 60px 20px 20px;
@@ -99,7 +123,7 @@ body {
     background: transparent;
     color: #555;
     font-family: 'Pixelify Sans', monospace;
-    font-size: 0.35;
+    font-size: 0.65;
     padding: 12px 14px;
     cursor: pointer;
     letter-spacing: 2px;
@@ -115,7 +139,6 @@ body {
 }
 
 .landing-section {
-    width: 100%;
     max-width: 800px;
     border-top: 1px solid #1c1c1c;
     padding: 60px 20px;
@@ -147,7 +170,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     font-size: clamp(0.5rem, 2vm, 1rem);
     letter-spacing: 2.5px;
     line-height: 2;
-    text-shadow: 2.5px 25px 0 #333;
+    text-shadow: 2.5px 2.5px 0 #333;
 }
 
 .about-section p {
@@ -185,7 +208,7 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 }
 .step-body h3 {
     font-family: 'Pixelify Sans', monospace;
-    font-size: 0.5rem;
+    font-size: 0.8rem;
     letter-spacing: 2.5px;
     margin-bottom: 10px;
     line-height: 1.5;
@@ -199,13 +222,34 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 }
 
 .role-section {
-    width: 100%;
     max-width: 800px;
     border-top: 1px solid #1c1c1c;
     padding: 50px 25px 25px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+.box {
+    width: 100%;
+    max-width: 800px;
+    border: 3px solid var(--border);
+    background: var(--box-bg);
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 40px;
+}
+
+.box-label {
+    font-family: 'Pixelify Sans', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+    text-align: center;
+
 }
 
 /* ROLE GRID & BUTTONS — used on index.html for role selection */
@@ -295,6 +339,18 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     background: var(--box-bg);
     color: var(--text);
 }
+[data-theme='light'] .box {
+    border-color: var(--border);
+    background: var(--box-bg);
+
+}
+
+[data-theme='light'] .box-label {
+    color: var(--text-dim);
+    border-bottom-color: var(--border);
+
+}
+
 [data-theme='light'] .role-btn span {
     color: var(--text-dim);
 }
