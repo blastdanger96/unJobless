@@ -359,8 +359,8 @@ def get_roles():
         {'name': role, 'emoji': data['emoji'], 'tagline': data['tagline']}
         for role, data in ROLE_DATA.items()
     ])
-if __name__ == '__main__':
+#if __name__ == '__main__':
 
-    print(f"unst.J0e_bless running on localhost:8000 | {len(QUESTIONS)} roles | {sum(len(v) for v in QUESTIONS.values())} questions fetched")
-    app.run(debug=True, port=8000)
+    #print(f"unst.J0e_bless running on localhost:8000 | {len(QUESTIONS)} roles | {sum(len(v) for v in QUESTIONS.values())} questions fetched")
+    #app.run(debug=True, port=8000)
 
