@@ -44,7 +44,33 @@
     --border: #ddd;
     --box-bg: #fff;
     --accent: #2b7c2f;
-
+    --accent-dim: #1a6b22;
+    --scanline: rgba(0,0,0,0.03);
+    --shadow: #e0e0e0;
+    --shadow-dark: #d0d0d0;
+    --tagline: #666;
+    --cta: #cccccc;
+    --hero-shadow: #999;
+    --label: #2b7c2f;
+    --label-light: #1a5c1e;
+    --step-num: #2b7c2f;
+    --step-num-light: #1a5c1e;
+    --step-border: #e0e0e0;
+    --step-border-light: #e0e0e0;
+    --section-border: #e0e0e0;
+    --section-border-light: #e0e0e0;
+    --role-section: #e0e0e0;
+    --about-h2: #e0e0e0;
+    --about-p: #333;
+    --step-body: #444;
+    --footer-text: #333;
+    --footer-shadow: #ccc;
+    --footer-border: #e0e0e0;
+    --btn-border: #ddd;
+    --btn-hover: #1a1a1a;
+    --btn-text: #666;
+    --btn-hover-text: #fff;
+    --btn-hover-border: #1a1a1a;
 }
 
 body::before {
