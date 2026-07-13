@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify, send_from_directory
 import random
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
+from ai_teacher import ai_grade, AI_ENABLED
 #os is a lib for interaction withj file explorer
 
 app = Flask(__name__, static_folder='.')
@@ -92,7 +96,15 @@ def submit():
     if len(answer) < 20:
         return jsonify({'error': 'Answer too short'}), 400
 
-    feedback, points, breakdown = grade(role, answer, question)
+    ai_result = ai_grade(role, answer, question, meta)
+    if ai_result:
+        feedback = ai_result["feedback"]
+        points = ai_result['points']
+        breakdown = ai_result['breakdown']
+        grader = "ai"
+    else:
+        feedback, points, breakdown = grade(role, answer, question)
+        grader = "rule"
 
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
     user_record['points'].append(points)
@@ -103,7 +115,8 @@ def submit():
         'points': points,
         'breakdown': breakdown,
         'max_points': 3
-    })
+        'grader' : grader
+        })
 
 
 @app.route('/status')
