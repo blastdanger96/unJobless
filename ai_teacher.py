@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import logging
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -11,8 +13,41 @@ AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "8"))
 
 _client = None
 
+_failure_count = 0
+_circuit_open_until = 0
+CIRCUIT_THRESHOLD = 5
+CIRCUIT_COOLDOWN_SECONDS = 60
 
-SYSTEM_PROMPT = """You are an expert technical interviewer grading candidate answers.
+logger = logging.getLogger(__name__)
+
+
+def _check_circuit() -> bool:
+    global _circuit_open_until
+    if _circuit_open_until > time.time():
+        return False
+    if _failure_count >= CIRCUIT_THRESHOLD:
+        _circuit_open_until = time.time() + CIRCUIT_COOLDOWN_SECONDS
+        return False
+    return True
+
+
+def _record_success():
+    global _failure_count
+    _failure_count = 0
+
+
+def _record_failure():
+    global _failure_count
+    _failure_count += 1
+
+
+def _load_system_prompt() -> str:
+    version = os.getenv("PROMPT_VERSION", "v1.0")
+    path = f"prompts/{version}_system.txt"
+    if os.path.exists(path):
+        with open(path) as f:
+            return f.read()
+    return """You are an expert technical interviewer grading candidate answers.
 Score 0-3 based on: accuracy, depth, structure, examples, communication.
 Return ONLY valid JSON: {"feedback": "string", "points": 0-3, "breakdown": "string"}
 
@@ -24,6 +59,8 @@ SCORING GUIDE:
 
 FEEDBACK STYLE: Direct, constructive, interviewer tone. Mention specific strengths/gaps.
 BREAKDOWN: Bullet points of what was covered vs missed."""
+
+SYSTEM_PROMPT = _load_system_prompt()
 
 
 def _build_prompt(role: str, question: str, answer: str, meta: dict) -> list[dict]:
@@ -61,14 +98,23 @@ def _get_client():
 
 
 def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict]:
-    """
-    Returns dict with keys: feedback, points, breakdown
-    Returns None if AI disabled, no key, or any error (caller falls back to rule-based)
-    """
+    start_time = time.time()
+
     if not AI_ENABLED:
         return None
     if not os.getenv("OPENAI_API_KEY"):
         return None
+
+    from cost_tracker import get_cost_tracker
+    tracker = get_cost_tracker()
+    status = tracker.get_status()
+    if status["over_daily"] or status["over_monthly"]:
+        logger.warning("AI budget exceeded, falling back to rule-based")
+        return None
+
+    if not _check_circuit():
+        logger.warning("Circuit breaker open, falling back")
+        return {"_meta": {"fallback_reason": "circuit_open"}}
 
     try:
         messages = _build_prompt(role, question, answer, meta)
@@ -82,6 +128,14 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
             response_format={"type": "json_object"},
         )
 
+        latency_ms = int((time.time() - start_time) * 1000)
+        tokens_in = resp.usage.prompt_tokens
+        tokens_out = resp.usage.completion_tokens
+
+        within_budget = tracker.record(AI_MODEL, tokens_in, tokens_out)
+        if not within_budget:
+            logger.warning("Budget exceeded after this request")
+
         content = resp.choices[0].message.content
         result = json.loads(content)
 
@@ -90,6 +144,24 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         if not isinstance(result["points"], int) or not 0 <= result["points"] <= 3:
             return None
 
+        _record_success()
+
+        result["_meta"] = {
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "latency_ms": latency_ms,
+            "model": AI_MODEL,
+            "prompt_version": os.getenv("PROMPT_VERSION", "v1.0"),
+            "fallback_reason": None,
+        }
+
+        logger.info(f"AI graded: role={role} points={result['points']} "
+                    f"tokens={tokens_in}/{tokens_out} latency={latency_ms}ms")
+
         return result
-    except Exception:
+
+    except Exception as e:
+        latency_ms = int((time.time() - start_time) * 1000)
+        logger.error(f"AI grading failed: {e} (latency={latency_ms}ms)")
+        _record_failure()
         return None

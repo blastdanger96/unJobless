@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from ai_teacher import ai_grade, AI_ENABLED
+from cost_tracker import get_cost_tracker
 
 app = Flask(__name__, static_folder='.')
 
@@ -97,7 +98,9 @@ def submit():
 
     meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
     ai_result = ai_grade(role, question, answer, meta)
+
     if ai_result:
+        # Strip internal metadata before sending to frontend
         feedback = ai_result["feedback"]
         points = ai_result['points']
         breakdown = ai_result['breakdown']
@@ -331,11 +334,20 @@ def basic_grade(answer: str) -> tuple:
 @app.route('/health')
 def health():
     from ai_teacher import AI_ENABLED, AI_MODEL
+    tracker = get_cost_tracker()
+    cost_status = tracker.get_status()
+
     return jsonify({
         'status': 'running',
         'ai_enabled': AI_ENABLED,
         'model': AI_MODEL if AI_ENABLED else None,
+        'prompt_version': os.getenv("PROMPT_VERSION", "v1.0"),
         'grader': 'hybrid (ai + rule fallback)' if AI_ENABLED else 'rule-based',
+        'cost_today_usd': cost_status["daily_usd"],
+        'cost_month_usd': cost_status["monthly_usd"],
+        'daily_limit_usd': cost_status["daily_limit_usd"],
+        'monthly_limit_usd': cost_status["monthly_limit_usd"],
+        'circuit_status': 'closed',
         'roles': list(QUESTIONS.keys()),
         'total_questions': sum(len(v) for v in QUESTIONS.values())
     })
