@@ -12,7 +12,7 @@ const timer_sec = 90;
 window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     // pulls wtrv after ? in the URL
-    role = params.get('role');
+    role = params.get('role');  
 // Ctrl+Enter shortcut to submit answer without using the button
 document.getElementById('user-answer').addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -69,8 +69,7 @@ async function loadQuestion() {
         }
 
     } catch (err) {
-        document.getElementById('question-display').innerHTML = 
-        'fah';
+        document.getElementById('question-display').innerHTML = 'fah';
         // generic fallback message covers both network failure and bad response 
     } 
 }

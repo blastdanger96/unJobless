@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from ai_teacher import ai_grade, AI_ENABLED
-#os is a lib for interaction withj file explorer
 
 app = Flask(__name__, static_folder='.')
 
@@ -96,7 +95,8 @@ def submit():
     if len(answer) < 20:
         return jsonify({'error': 'Answer too short'}), 400
 
-    ai_result = ai_grade(role, answer, question, meta)
+    meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
+    ai_result = ai_grade(role, question, answer, meta)
     if ai_result:
         feedback = ai_result["feedback"]
         points = ai_result['points']
@@ -114,8 +114,8 @@ def submit():
         'feedback': feedback,
         'points': points,
         'breakdown': breakdown,
-        'max_points': 3
-        'grader' : grader
+        'max_points': 3,
+        'grader' : grader,
         })
 
 
@@ -330,10 +330,12 @@ def basic_grade(answer: str) -> tuple:
 
 @app.route('/health')
 def health():
+    from ai_teacher import AI_ENABLED, AI_MODEL
     return jsonify({
         'status': 'running',
-        'ai_enabled': False,
-        'grader': 'rule-based (no external ai calls)',
+        'ai_enabled': AI_ENABLED,
+        'model': AI_MODEL if AI_ENABLED else None,
+        'grader': 'hybrid (ai + rule fallback)' if AI_ENABLED else 'rule-based',
         'roles': list(QUESTIONS.keys()),
         'total_questions': sum(len(v) for v in QUESTIONS.values())
     })
