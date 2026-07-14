@@ -19,3 +19,27 @@ unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
 127.0.0.1 - - [13/Jul/2026 00:57:21] "GET /roles HTTP/1.1" 200 -
 127.0.0.1 - - [13/Jul/2026 00:57:23] "GET /health HTTP/1.1" 200 -
 127.0.0.1 - - [13/Jul/2026 00:57:27] "GET /status?user=test HTTP/1.1" 200 -
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+Traceback (most recent call last):
+  File "/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py", line 8, in <module>
+    from ai_teacher import ai_grade, AI_ENABLED
+  File "/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py", line 23, in <module>
+    def ai_grade (role:str, questions: str, answer: str, meta:dict) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
