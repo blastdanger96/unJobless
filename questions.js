@@ -11,70 +11,60 @@ let currentImproved = '';
 let currentChanges = [];
 
 
-
-//it works out here cuz nthin below needs those to be ready
-window.addEventListener('DOMContentLoaded', async () => {
+async function init() {
     const params = new URLSearchParams(window.location.search);
-    // pulls wtrv after ? in the URL
-    role = params.get('role');  
-// Ctrl+Enter shortcut to submit answer without using the button
-document.getElementById('user-answer').addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        submitAnswer();
-    }
-});
+    role = params.get('role');
+
+    document.getElementById('user-answer').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            submitAnswer();
+        }
+    });
 
     if (!role) {
-        // no rle in the URL means the user landed here without going through index.html's role buttons, so there's isn't anything to quiz em on
         alert('Role not specified. Please provide a role in the URL query parameters.');
         return;
-        //stops here rather than throwing, since the rest of this listener assumes role is set
     }
 
-    document.getElementById('role-title').textContent =  role.toUpperCase();
+    document.getElementById('role-title').textContent = role.toUpperCase();
     document.getElementById('role-subtitle').textContent = '//' + role + 'Interview //';
 
     document.getElementById('user-answer').addEventListener('input', () => {
-        // used to live-update the word counter in textarea
         const text = document.getElementById('user-answer').value.trim();
-        const count = text == '' ? 0 :text.split(/\s+/).length;
-        //not to count double-spaces and tab spaces
+        const count = text === '' ? 0 : text.split(/\s+/).length;
         const el = document.getElementById('word-count');
         el.textContent = count;
         el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
     });
 
     await loadQuestion();
-    // waiting here means nothing else in this listener runs until the irst question has actually loaded
-});
+}
 
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
 
 async function loadQuestion() {
     try {
         const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
-        // encodeURIComponent escapes spaces and special characters in role names like "UI Designer" so the query string stays valid 
         if (!res.ok) throw new Error('fah server was voted out gng');
-        // fetch only rejects on network failure not on HTTP error codes, so this manual check is wht catches a 400/500 from backend
         const data = await res.json();
         document.getElementById('question-display').innerHTML =
             '> ' + data.question + '<span class="cursor">_</span>';
-        // innerHTML (not textContent) because the blinking cursor span needs to actually render as an element not literal txt
-        document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
-        // +1 since questionsAnswered only increments after a question being asked now
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
         startTimer();
-        // badge info fetched from len of string in py
         const badge = document.getElementById('difficulty-lvl');
 
         if (badge && data.difficulty) {
             badge.textContent = data.difficulty.toUpperCase();
-        badge.className = data.difficulty;
+            badge.className = data.difficulty;
         }
 
     } catch (err) {
         document.getElementById('question-display').innerHTML = 'fah';
-        // generic fallback message covers both network failure and bad response 
     } 
 }
 

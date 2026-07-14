@@ -54,8 +54,14 @@ function initReveal () {
 }
 
 // --boot---
-document.addEventListener('DOMContentLoaded', () => {
+function init() {
     loadRoles();
     runTypewriting();
     initReveal();
-})
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
