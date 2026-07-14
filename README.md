@@ -58,14 +58,13 @@ Also please don't judge my commit comments, I was new to github and didn't know 
 ## Dependencies
 
 requirements.txt (4 packages)
-| Package | Version | Description |
-|---------|---------|-------------|
-| flask | latest | Web framework |
-| openai | >=1.0.0 | OpenAI API client (AI grading) |
-| python-dotenv | >1.0.0 | Load .env config |
-| PyJWT | latest | JWT token auth |
+- Package Version 
+- flask latest  (Web framework)
+- openai  >=1.0.0 OpenAI API client (AI grading)
+- python-dotenv >1.0.0  Load .env config
+- PyJWT latest  (JWT token auth)
 
 
 ## License
 
-MIT - Built for Hack Club and do anything but commit it and remove the old readme
+MIT - Built for Hack Club
