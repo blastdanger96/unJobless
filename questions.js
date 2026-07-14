@@ -221,8 +221,7 @@ async function skipQuestion() {
 }
 
 // State for correction modal
-let currentImproved = '';
-let currentChanges = [];
+// (declared at top of file)
 
 async function improveAnswer() {
     const answer = document.getElementById('user-answer').value.trim();
