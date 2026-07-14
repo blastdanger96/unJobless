@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import jwt
-from ai_teacher import ai_grade, AI_ENABLED
+from ai_teacher import ai_grade, ai_correct, AI_ENABLED
 from cost_tracker import get_cost_tracker
 
 SECRET_KEY = os.getenv("JWT_SECRET", os.urandom(32).hex())
@@ -353,6 +353,45 @@ def submit():
         'breakdown': breakdown,
         'max_points': 3,
         'grader': grader,
+    })
+
+
+@app.route('/correct', methods=['POST'])
+def correct():
+    body = request.get_json(silent=True)
+    if not body:
+        return jsonify({'error': 'No data received'}), 400
+
+    session = _get_session_from_request()
+    if session:
+        role = session['role']
+        question = session['questions'][-1]['question'] if session['questions'] else ''
+    else:
+        role = body.get('role', '').strip()
+        question = _recent.get(role, '')
+
+    answer = body.get('answer', '').strip()
+    if len(answer) < 20:
+        return jsonify({'error': 'Answer too short'}), 400
+
+    meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
+    
+    # First get the grading feedback
+    ai_result = ai_grade(role, question, answer, meta)
+    if ai_result:
+        feedback = ai_result["feedback"]
+    else:
+        feedback, _, _ = grade(role, answer, question)
+    
+    result = ai_correct(role, question, answer, meta, feedback)
+
+    if not result:
+        return jsonify({'error': 'Correction unavailable'}), 503
+
+    return jsonify({
+        'improved': result['improved_answer'],
+        'changes': result['changes'],
+        'explanation': result['explanation']
     })
 
 

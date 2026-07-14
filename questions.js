@@ -6,6 +6,10 @@ let timeRemaining = 90;
 let timerInterval = null;
 const timer_sec = 90;
 
+// correction state
+let currentImproved = '';
+let currentChanges = [];
+
 
 
 //it works out here cuz nthin below needs those to be ready
@@ -191,6 +195,9 @@ async function submitAnswer() {
         document.getElementById('next-btn').style.display = 'block';
         // only reveal "next question once grading acc succeeded"
 
+        // show AI improve button after successful submit
+        document.getElementById('improve-btn').style.display = 'block';
+
     } catch (err) {
         feedbackText.textContent = 'ye cant reach testube or flask or smth, fah';
     } finally {
@@ -221,5 +228,81 @@ async function skipQuestion() {
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
     loadQuestion();
+}
+
+// State for correction modal
+let currentImproved = '';
+let currentChanges = [];
+
+async function improveAnswer() {
+    const answer = document.getElementById('user-answer').value.trim();
+    if (answer.length < 20) {
+        alert('write more first dawg');
+        return;
+    }
+
+    const btn = document.getElementById('improve-btn');
+    btn.disabled = true;
+    btn.textContent = '...improving...';
+
+    try {
+        const res = await fetch('/correct', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({role: role, answer: answer})
+        });
+
+        if (!res.ok) throw new Error('improvement failed');
+        const data = await res.json();
+
+        currentImproved = data.improved;
+        currentChanges = data.changes;
+        showCorrection(data.explanation, data.changes);
+
+    } catch (err) {
+        alert('AI correction failed bruh');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'AI IMPROVE MY ANSWER';
+    }
+}
+
+function showCorrection(explanation, changes) {
+    const modal = document.getElementById('correction-modal');
+    const expEl = document.getElementById('correction-explanation');
+    const diffEl = document.getElementById('correction-diff');
+
+    expEl.innerHTML = `<p class="correction-explanation">${explanation}</p>`;
+
+    let diffHtml = '<div class="diff-container">';
+    changes.forEach(c => {
+        const cls = c.type === 'add' ? 'diff-add' : (c.type === 'remove' ? 'diff-remove' : 'diff-replace');
+        diffHtml += `<div class="diff-line ${cls}">`;
+        if (c.original) diffHtml += `<span class="diff-original">${escapeHtml(c.original)}</span>`;
+        if (c.improved) diffHtml += `<span class="diff-improved">${escapeHtml(c.improved)}</span>`;
+        diffHtml += `<span class="diff-reason">${escapeHtml(c.reason)}</span></div>`;
+    });
+    diffHtml += '</div>';
+    diffEl.innerHTML = diffHtml;
+
+    modal.classList.remove('hidden');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function applyCorrection() {
+    document.getElementById('user-answer').value = currentImproved;
+    document.getElementById('user-answer').dispatchEvent(new Event('input'));
+    closeCorrection();
+}
+
+function closeCorrection() {
+    document.getElementById('correction-modal').classList.add('hidden');
+    currentImproved = '';
+    currentChanges = [];
 }
 

@@ -51,6 +51,7 @@
 
     <button id="submit-btn" onclick="submitAnswer()" aria-label="SUBMIT YOUR ANSWER."> GOOD LUCK. MAY THO PASS</button>
     <button id="skip-btn" onclick="skipQuestion()">SKIP THIS QUESTION</button>
+    <button id="improve-btn" onclick="improveAnswer()" class="hidden">AI IMPROVE MY ANSWER</button>
 
     <div id="feedback-box" class="hidden">
         <div class="box-label">
@@ -65,6 +66,24 @@
         <div id="feedback-breakdown"></div>
         <button id="next-btn" onclick="nextQuestion()">NEXT QUESTION -></button>
 
+    </div>
+
+    <div id="correction-modal" class="hidden">
+        <div class="modal-overlay" onclick="closeCorrection()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>AI IMPROVED ANSWER</h3>
+                <button class="modal-close" onclick="closeCorrection()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="correction-explanation"></div>
+                <div id="correction-diff"></div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeCorrection()">CANCEL</button>
+                <button id="apply-correction" onclick="applyCorrection()">APPLY IMPROVEMENT</button>
+            </div>
+        </div>
     </div>
 
     <div class="footer">
