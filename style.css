@@ -1,76 +1,12 @@
-:root {
-    --bg: #000000;
-    --text: #ffffff;
-    --text-dim: #aaaaaa;
-    --text-dimmer: #666666;
-    --border: #333333;
-    --box-bg: #000000;
-    --accent: #00ff00;
-    --accent-dim: #00cc00;
-    --scanline: rgba(0,0,0,0.07);
-    --shadow: #333333;
-    --shadow-dark: #202020;
-    --tagline: #aaaaaa;
-    --cta: #444444;
-    --hero-shadow: #9c9c9c;
-    --label: #4caf50;
-    --label-light: #2b7c2f;
-    --step-num: #4caf50;
-    --step-num-light: #2b7c2f;
-    --step-border: #111111;
-    --step-border-light: #e5e5e5;
-    --section-border: #1c1c1c;
-    --section-border-light: #dddddd;
-    --role-section: #dddddd;
-    --about-h2: #333333;
-    --about-p: #888888;
-    --step-body: #777777;
-    --footer-text: #dedede;
-    --footer-shadow: #676767;
-    --footer-border: #1a1a1a;
-    --btn-border: #333333;
-    --btn-hover: #ffffff;
-    --btn-text: #555555;
-    --btn-hover-text: #ffffff;
-    --btn-hover-border: #ffffff;
-
-}
-
-[data-theme='light'] {
-    --bg: #fafafa;
-    --text: #1a1a1a;
-    --text-dim: #666;
-    --text-dimmer: #999;
-    --border: #ddd;
-    --box-bg: #fff;
-    --accent: #2b7c2f;
-    --accent-dim: #1a6b22;
-    --scanline: rgba(0,0,0,0.03);
-    --shadow: #e0e0e0;
-    --shadow-dark: #d0d0d0;
-    --tagline: #666;
-    --cta: #cccccc;
-    --hero-shadow: #999;
-    --label: #2b7c2f;
-    --label-light: #1a5c1e;
-    --step-num: #2b7c2f;
-    --step-num-light: #1a5c1e;
-    --step-border: #e0e0e0;
-    --step-border-light: #e0e0e0;
-    --section-border: #e0e0e0;
-    --section-border-light: #e0e0e0;
-    --role-section: #e0e0e0;
-    --about-h2: #e0e0e0;
-    --about-p: #333;
-    --step-body: #444;
-    --footer-text: #333;
-    --footer-shadow: #ccc;
-    --footer-border: #e0e0e0;
-    --btn-border: #ddd;
-    --btn-hover: #1a1a1a;
-    --btn-text: #666;
-    --btn-hover-text: #fff;
-    --btn-hover-border: #1a1a1a;
+body {
+    margin: 0;
+    font-family: 'VT323', monospace;
+    background: #fafafa;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 body::before {
@@ -84,21 +20,9 @@ body::before {
         to bottom,
         transparent 0px,
         transparent 3px,
-        var(--scanline) 3px,
-        var(--scanline) 4px 
+        rgba(0,0,0,0.03) 3px,
+        rgba(0,0,0,0.03) 4px
     );
-}
-
-body {
-    background-image: 
-    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.012)1px, transparent 1px);
-    background-size: 40px 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-
 }
 
 .hero {
@@ -114,17 +38,17 @@ body {
 .hero-eyebrow {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.5rem;
-    color: var(--label);
+    color: #2b7c2f;
     letter-spacing: 5px;
     opacity: 0;
-    animation: fadeUp 0.5s ease forwards 0.1s
-
+    animation: fadeUp 0.5s ease forwards 0.1s;
 }
+
 .hero h1 {
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(1.5rem, 5vm, 2.5rem);
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
     letter-spacing: 5px;
-    text-shadow: 5px 5px 0 var(--hero-shadow), 0 0 40px rgba(var(--accent, 0.15));
+    text-shadow: 4px 4px 0 #ddd, 0 0 40px rgba(43,124,47,0.1);
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.25s;
     line-height: 1.5;
@@ -134,10 +58,11 @@ body {
 .hero h1:hover {
     animation: fadeUp 0s, glitch 0.5s ease;
 }
+
 .hero-tagline {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
-    color: var(--tagline);
+    color: #666;
     letter-spacing: 5px;
     min-height: 5rem;
     opacity: 0;
@@ -146,22 +71,17 @@ body {
 
 .typewriter-cursor {
     display: inline-block;
-    color: var(--accent);
-    animation: blink 1s step-end;
-
+    color: #2b7c2f;
+    animation: blink 1s step-end infinite;
 }
 
 #typewriter-text {
     font-family: 'Pixelify Sans', monospace;
     font-size: 0.7rem;
-    color: var(--text-dim);
+    color: #999;
     letter-spacing: 2.5px;
     min-height: 1.5rem;
     display: inline-block;
-}
-
-[data-theme='light'] #typewriter-text {
-    color: var(--text-dim);
 }
 
 .hero-cta {
@@ -172,29 +92,9 @@ body {
     animation: fadeUp 0.5s ease forwards 1s;
 }
 
-#theme-toggle {
-    border: 1px solid var(--btn-border);
-    background: transparent;
-    color: var(--btn-text);
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.65;
-    padding: 12px 14px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    transition: border-color 0.2s, color 0.2s;
-    opacity: 0;
-    animation: fadeUp 0.8s ease forwards 1.9s;
-}
-
-#theme-toggle:hover {
-    border-color: var(--btn-hover-border);
-    color: var(--btn-hover-text);
-
-}
-
 .landing-section {
     max-width: 800px;
-    border-top: 1px solid var(--section-border);
+    border-top: 1px solid #ddd;
     padding: 60px 20px;
     display: flex;
     flex-direction: column;
@@ -204,37 +104,25 @@ body {
 .section-label {
     font-family: 'Pixelify Sans', monospace;
     font-size: 1.5rem;
-    color: var(--label);
+    color: #2b7c2f;
     letter-spacing: 4px;
 }
 
-/* FOR THO LEGEND WHO DECIDED TO READ MY CODE AND SUTUMBLED UPON TILL HERE, I AM PROUD OF YOU
-                I RESPECT YOUR EFFORTS BUT SHALL WARN THY SOUL
-        LIGHT MODE HAS BEEN MADE FOR A BOOMER UNLIKE ONESELF READING (hopefully)
-            IT SHALL BE STERNLY ADVICED TO WEAR SUNGLASSES 
-                    BEFOREHAND OPENING THIS MONSTORCITY
-            SHALL IT BE YOU DO NOT TAKE THIS WISE MAN'S ADVICE
-                    I WILL NOT BE RESPONISBLE FOR ANY DAMAGES
-                    COPYRIGHTS, OR OCCURENCES HEREAFTER
-
-may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be flashed by now and later in tht innocent's life*/
-
 .about-section h2 {
     font-family: 'Pixelify Sans', monospace;
-    font-size: clamp(0.5rem, 2vm, 1rem);
+    font-size: clamp(0.5rem, 2vw, 1rem);
     letter-spacing: 2.5px;
     line-height: 2;
-    text-shadow: 2.5px 2.5px 0 var(--about-h2);
+    text-shadow: 2.5px 2.5px 0 #ddd;
 }
 
 .about-section p {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.5rem;
-    color: var(--about-p);
+    color: #555;
     line-height: 1.5;
     letter-spacing: 1px;
     max-width: 640px;
-
 }
 
 .steps {
@@ -248,14 +136,14 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     gap: 25px;
     align-items: flex-end;
     padding: 25px 0;
-    border-bottom: 1px solid var(--step-border);
+    border-bottom: 1px solid #e5e5e5;
 }
 .step:last-child {border-bottom:none;}
 
 .step-num {
     font-family: 'Pixelify Sans', monospace;
     font-size: 0.5rem;
-    color: var(--step-num);
+    color: #2b7c2f;
     letter-spacing: 2.5px;
     min-width: 25px;
     padding-top: 5px;
@@ -270,14 +158,14 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 .step-body p {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
-    color: var(--step-body);
+    color: #555;
     letter-spacing: 1px;
     line-height: 1.5;
 }
 
 .role-section {
     max-width: 800px;
-    border-top: 1px solid var(--section-border);
+    border-top: 1px solid #ddd;
     padding: 50px 25px 25px;
     display: flex;
     flex-direction: column;
@@ -287,8 +175,8 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 .box {
     width: 100%;
     max-width: 800px;
-    border: 3px solid var(--border);
-    background: var(--box-bg);
+    border: 3px solid #ddd;
+    background: #fff;
     border-radius: 8px;
     padding: 24px;
     margin-top: 40px;
@@ -297,16 +185,14 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 .box-label {
     font-family: 'Pixelify Sans', monospace;
     font-size: 0.6rem;
-    color: var(--text-dim);
+    color: #999;
     letter-spacing: 3px;
     margin-bottom: 20px;
     padding-bottom: 12px;
-    border-bottom: 2px solid var(--border);
+    border-bottom: 2px solid #ddd;
     text-align: center;
-
 }
 
-/* ROLE GRID & BUTTONS — used on index.html for role selection */
 .role-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -315,16 +201,16 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 }
 
 .role-btn {
-    border: 3px solid var(--border);
-    background: var(--box-bg);
-    color: var(--text);
+    border: 3px solid #ddd;
+    background: #fff;
+    color: #1a1a1a;
     font-family: 'Pixelify Sans';
     font-weight: 400;
     padding: 18px 16px;
     cursor: pointer;
     letter-spacing: 0.5px;
     text-align: left;
-    transition: background 0.1s, color 0.1s, transform 0.05s;
+    transition: background 0.1s, color 0.1s, border-color 0.1s, transform 0.05s;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -332,50 +218,52 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
 
 .role-btn span {
     font-size: 0.8rem;
-    color: var(--text-dim);
+    color: #999;
     letter-spacing: 1px;
 }
 
 .role-btn:hover {
-    background: var(--text);
-    color: var(--bg);
+    background: #1a1a1a;
+    color: #fff;
+    border-color: #1a1a1a;
 }
 
 .role-btn:hover span {
-    color: var(--text-dimmer);
+    color: #bbb;
 }
 
 .role-btn:active {
     transform: scale(0.98);
 }
 
-/* SCROL REVEAL EFFECTS */
 .reveal {
     opacity: 0;
     transform: translateY(7.5px);
     transition: opacity 0.5s ease, transform 0.5s ease;
-
 }
 
 .reveal.visible {
     opacity: 1;
     transform: translateY(0);
-
 }
 
-/* ANIMATIONS */
 @keyframes fadeUp {
     from {opacity: 0; transform: translateY(15px);}
     to {opacity: 1; transform: translateY(0);}
 }
 
 @keyframes glitch {
-    0% {text-shadow:  4px 4px 0 #333; transform: translate(0);}
-    20% {text-shadow: -3px 0 #4caf50, 3px 0 #fff; transform: translate(-2px, 0);}
-    40%{text-shadow: 3px 0 #4caf50, -3px 0 #fff; transform: translate(2px, 0);}
-    60% {text-shadow: -2px 0 #4caf50; transform: translate(-1px, 0);}
-    80% {text-shadow: 4px 4px #333; transform: translate(1px, 0);}
-    100% {text-shadow: 4px 4px 0 #333; transform: translate(0);}
+    0% {text-shadow:  4px 4px 0 #ddd; transform: translate(0);}
+    20% {text-shadow: -3px 0 #2b7c2f, 3px 0 #fff; transform: translate(-2px, 0);}
+    40%{text-shadow: 3px 0 #2b7c2f, -3px 0 #fff; transform: translate(2px, 0);}
+    60% {text-shadow: -2px 0 #2b7c2f; transform: translate(-1px, 0);}
+    80% {text-shadow: 4px 4px #ddd; transform: translate(1px, 0);}
+    100% {text-shadow: 4px 4px 0 #ddd; transform: translate(0);}
+}
+
+@keyframes blink {
+    from, to {opacity: 1;}
+    50% {opacity: 0;}
 }
 
 .footer {
@@ -383,22 +271,14 @@ may thy soul's eyes find peace in heaven after wtrv hell that it is abt to be fl
     max-width: 680px;
     display: flex;
     justify-content: space-between;
-    color: var(--footer-text);
+    color: #333;
     font-family: 'Pixelify Sans', cursive;
     font-size: 0.45rem;
     line-height: 1.4;
-    letter-spacing: 0px;
-    text-shadow: 4px 4px 0 var(--footer-shadow);
+    letter-spacing: 2px;
+    text-shadow: 3px 3px 0 #ddd;
     font-weight: 400;
     padding-top: 25px;
-    border-top: 2px solid var(--footer-border);
-    letter-spacing: 2px;
+    border-top: 2px solid #ddd;
     margin-top: 50px;
 }
-
-
-
-
-
-
-

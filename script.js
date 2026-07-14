@@ -17,24 +17,6 @@ async function loadRoles() {
 function selectRole(role) {
     window.location.href = `questions.html?role=${encodeURIComponent(role)}`;
 }
-// dark/light theme btn 
-let currentlyTheme = 'dark'
-
-function loadTheme() {
-    const saved = localStorage.getItem('unjobless-theme');
-    if (saved) {
-        currentlyTheme = saved;
-        document.documentElement.setAttribute('data-theme', saved);
-    }
-}
-
-async function btnTheme() {
-   currentlyTheme = currentlyTheme === 'dark' ? 'light' : 'dark';
-   document.documentElement.setAttribute('data-theme', currentlyTheme);
-   localStorage.setItem('unjobless-theme',currentlyTheme);
-    // default is dark btw
-    //  i aint a monster to put tht shi on light on default
-}
 
 // typerwritr effect
 function runTypewriting() {
@@ -73,7 +55,6 @@ function initReveal () {
 
 // --boot---
 document.addEventListener('DOMContentLoaded', () => {
-    loadTheme();
     loadRoles();
     runTypewriting();
     initReveal();
