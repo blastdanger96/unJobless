@@ -4,11 +4,10 @@ unJobless is a light Flask-based AI grader for the most asked interview question
 
 ### Quick Start
 1. You can directly use the hosted website link from Vercel:- https://unjobless.vercel.app/index.html
-![alt text](<Screenshot 2026-07-14 at 4.28.06 PM.png>)
+<img width="874" height="691" alt="Screenshot 2026-07-14 at 4 28 59 PM" src="https://github.com/user-attachments/assets/485dd8f1-0079-4b61-b8b8-54a9af95baac" />
+<img width="794" height="300" alt="Screenshot 2026-07-14 at 4 28 27 PM" src="https://github.com/user-attachments/assets/9f8ce48f-11bb-4ec1-990f-12238704edfb" />
+<img width="680" height="471" alt="Screenshot 2026-07-14 at 4 28 06 PM" src="https://github.com/user-attachments/assets/79939a5a-3d7b-44c1-ad64-0025e294dd88" />
 
-![alt text](<Screenshot 2026-07-14 at 4.28.27 PM.png>)
-
-![alt text](<Screenshot 2026-07-14 at 4.28.59 PM.png>)
 
 
 2. You can download the required code and dependencies yourself and run it localhost (MAKE SURE TO REMOVE COMMENTS FROM PYTHON app.py CODE)
