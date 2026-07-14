@@ -1,17 +1,17 @@
-# unJobless - AI Interview Practice
+### unJobless - AI Interview Practice
 
-A Flask-based interview practice platform with rule-based AI grading. Practice for Software Engineer, Consultant, Data Analyst, and UI Designer roles.
+unJobless is a light Flask-based AI grader for the most asked interview questions, made specifically to provide a All-in-One plateform for cringe Gen-z job seekers who want to actively learn and improve to score a decent job, in such a shitty job market.
 
-## Features
+### Quick Start
+1. You can directly use the hosted website link from Vercel:- https://unjobless.vercel.app/index.html
+![alt text](<Screenshot 2026-07-14 at 4.28.06 PM.png>)
 
-- **4 Interview Roles**: Software Engineer, Consultant, Data Analyst, UI/UX Designer
-- **Rule-based AI Grading**: No external API calls - grades locally using keyword matching, concept detection, and structure analysis
-- **Real-time Feedback**: Live Interview Flow**: Questions served from a curated bank, instant grading with detailed breakdowns
-- **Word Count Tracking**: Live word counter with visual feedback at 50+ words
-- **Terminal/Pixel Aesthetic**: VT323 + Press Start 2P fonts, dark theme, glitchy cursor
+![alt text](<Screenshot 2026-07-14 at 4.28.27 PM.png>)
 
-## Quick Start
+![alt text](<Screenshot 2026-07-14 at 4.28.59 PM.png>)
 
+
+2. You can download the required code and dependencies yourself and run it localhost (MAKE SURE TO REMOVE COMMENTS FROM PYTHON app.py CODE)
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -19,91 +19,51 @@ pip install -r requirements.txt
 # Run the server
 python app.py
 
-# Open http://localhost:8000
+# Open the said running local server given in the terminal
 ```
 
 ## Project Structure
 
 ```
-Project_dp/
-├── app.py              # Flask backend with question bank & grader
-├── index.html          # Main page - role selection + interview
-├── questions.html      # Standalone interview page (role via URL)
-├── questions.js        # Interview logic for questions.html
-├── questions.css       # Shared styles for interview pages
-├── script.js           # Interview logic for index.html
-├── requirements.txt    # Python dependencies
+unJobless/
+├── app.py                # Flask backend: auth, sessions, grading,
+├── ai_teacher.py          #OpenAI grading (hybrid with rule fallback)
+├── cost_tracker.py        # OpenAI API cost tracking & circuit breaker
+├── questions.json         # Question bank (4 roles, ~75 questions)
+├── requirements.txt       # Python deps: flask, openai, python-dotenv, PyJWT
+├── index.html             # Landing page 
+├── style.css              # index.html styles
+├── script.js              # index.js rules and logic
+├── questions.html         # Interview page 
+├── questions.js           # Interview rules and logic 
+├── questions.css          # Interview page styles 
 └── README.md
 ```
 
-## Usage
 
-### Main Flow (index.html)
-1. Open `http://localhost:8000`
-2. Click a role button
-3. Answer the question (minimum 25 chars)
-4. Click "Submit Answer"
-5. View AI feedback with score breakdown
-6. Click "Next Question" for another
 
-### Direct Role Link (questions.html)
-Append role to URL: `http://localhost:8000/questions.html?role=Software%20Engineer`
+### DISCLAIMER
 
-Valid roles: `Software Engineer`, `Consultant`, `Data Analyst`, `UI Designer`
+I have used AI for:-
+1. When I started to code for unJobless, I was very much familiar with python but the course I had learnt it using didn't teach me anything about github, so I had to take AI's help as I was completely blank in the beginning to commit my code and learn how things work.
 
-## API Endpoints
+2. Solving bugs in the code I was oblivious to and unable to crack many times, this includes entire page failures and function not being able to get called properly and utilized, to basic spelling errors and excessive relience on tutorial turning the code complicated.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Serves index.html |
-| `/questions.html` | GET | Serves questions.html |
-| `/question?role=X` | GET | Returns random question for role |
-| `/submit` | POST | Grades answer, returns feedback + score |
-| `/health` | GET | Health check + stats |
+3. For a new language (I was completely new to json so I had to ask AI to give me the structure to write the questions in them for the question bank I made, used in rule based learning in python)
 
-### `/submit` Request
-```json
-{
-  "role": "Software Engineer",
-  "answer": "Your answer here..."
-}
-```
+I have specifically used Nemotron 3 Ultra 550B A55B model, NVIDA's latest model which gives you free tokens on opencode for this help and for committing I have also used VS-Code's own baked Copilot and it's been really useful. Taught me alot of stuff i'd be struggling for in minutes and I am super grateful.
 
-### `/submit` Response
-```json
-{
-  "feedback": "Detailed feedback text...",
-  "points": 2,
-  "max_points": 3,
-  "breakdown": "Score breakdown with markers..."
-}
-```
-
-## Grading Logic (Rule-based, No AI)
-
-The grader evaluates answers against question metadata:
-- **Keywords** - Required technical terms
-- **Concepts** - Higher-level ideas that should appear
-- **Examples** - Detection of concrete examples ("for example", "e.g.", specific case studies)
-- **Structure** - Transition words (first, second, finally, however, etc.)
-- **Length** - Compared to `ideal_length` per question
-
-Scores: 0-3 points per question. Breakdown shows `+` strengths, `~` partial, `-` weaknesses.
-
-## Development
-
-```bash
-# Run with auto-reload
-python app.py
-
-# Health check
-curl http://localhost:8000/health
-```
+Also please don't judge my commit comments, I was new to github and didn't know you gotta be serious with them, I have understood my mistake and will try to fix them, so I am also open for feedback!
 
 ## Dependencies
 
-- Flask (Python)
-- Google Fonts: Press Start 2P, VT323 (loaded via CDN)
+requirements.txt (4 packages)
+- Package	Version	
+- flask	latest	(Web framework)
+- openai	>=1.0.0	OpenAI API client (AI grading)
+- python-dotenv	>1.0.0	Load .env config
+- PyJWT	latest	(JWT token auth)
+
 
 ## License
 
