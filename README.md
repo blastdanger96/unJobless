@@ -4,11 +4,11 @@ unJobless is a light Flask-based AI grader for the most asked interview question
 
 ### Quick Start
 1. You can directly use the hosted website link from Vercel:- https://unjobless.vercel.app/index.html
-![alt text](<Screenshot 2026-07-14 at 4.28.06 PM.png>)
+![alt text](<Screenshot 2026-07-14 at 4.28.06 PM.png>)
 
-![alt text](<Screenshot 2026-07-14 at 4.28.27 PM.png>)
+![alt text](<Screenshot 2026-07-14 at 4.28.27 PM.png>)
 
-![alt text](<Screenshot 2026-07-14 at 4.28.59 PM.png>)
+![alt text](<Screenshot 2026-07-14 at 4.28.59 PM.png>)
 
 
 2. You can download the required code and dependencies yourself and run it localhost (MAKE SURE TO REMOVE COMMENTS FROM PYTHON app.py CODE)
@@ -58,13 +58,14 @@ Also please don't judge my commit comments, I was new to github and didn't know 
 ## Dependencies
 
 requirements.txt (4 packages)
-- Package	Version	
-- flask	latest	(Web framework)
-- openai	>=1.0.0	OpenAI API client (AI grading)
-- python-dotenv	>1.0.0	Load .env config
-- PyJWT	latest	(JWT token auth)
+| Package | Version | Description |
+|---------|---------|-------------|
+| flask | latest | Web framework |
+| openai | >=1.0.0 | OpenAI API client (AI grading) |
+| python-dotenv | >1.0.0 | Load .env config |
+| PyJWT | latest | JWT token auth |
 
 
 ## License
 
-MIT - Built for Hack Club
+MIT - Built for Hack Club and do anything but commit it and remove the old readme
