@@ -32,13 +32,15 @@ def _check_circuit() -> bool:
 
 
 def _record_success():
-    global _failure_count
+    global _failure_count, _circuit_open_until
     _failure_count = 0
+    _circuit_open_until = 0
 
 
 def _record_failure():
     global _failure_count
-    _failure_count += 1
+    if _circuit_open_until <= time.time():
+        _failure_count += 1
 
 
 def _load_system_prompt() -> str:
@@ -114,7 +116,12 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
 
     if not _check_circuit():
         logger.warning("Circuit breaker open, falling back")
-        return {"_meta": {"fallback_reason": "circuit_open"}}
+        return {
+            "feedback": "AI grading temporarily unavailable (circuit breaker open). Using rule-based grading.",
+            "points": 0,
+            "breakdown": "Circuit breaker triggered - falling back to rule-based grading",
+            "_meta": {"fallback_reason": "circuit_open"}
+        }
 
     try:
         messages = _build_prompt(role, question, answer, meta)
@@ -228,7 +235,7 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
 
     if not _check_circuit():
         logger.warning("Circuit breaker open, cannot correct")
-        return None
+        return {"error": "circuit_open", "message": "AI correction unavailable (circuit breaker open)"}
 
     try:
         messages = _build_correct_prompt(role, question, answer, meta, feedback)

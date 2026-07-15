@@ -44,13 +44,21 @@ async function init() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
-    init();
+    init(); 
 }
 
+window.addEventListener('beforeunload', () => {
+    stopTimer();
+});
+
 async function loadQuestion() {
+    if (!role) {
+        document.getElementById('question-display').innerHTML = 'Error: No role specified';
+        return;
+    }
     try {
         const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
-        if (!res.ok) throw new Error('fah server was voted out gng');
+        if (!res.ok) throw new Error(`Failed to load question (${res.status})`);
         const data = await res.json();
         document.getElementById('question-display').innerHTML =
             '> ' + data.question + '<span class="cursor">_</span>';
@@ -64,7 +72,9 @@ async function loadQuestion() {
         }
 
     } catch (err) {
-        document.getElementById('question-display').innerHTML = 'fah';
+        console.error('Failed to load question:', err);
+        document.getElementById('question-display').innerHTML = 
+            'Failed to load question. <button onclick="loadQuestion()">Retry</button>';
     } 
 }
 
@@ -129,10 +139,14 @@ function handleTime () {
 
 
 async function submitAnswer() {
+    if (!role) {
+        alert('Role not specified. Please reload the page with a valid role.');
+        return;
+    }
+
     const answer = document.getElementById('user-answer').value.trim();
 
     if (answer.length < 20) {
-        // client-side length gate, mirrors the same 20-char minimum enforced server-side in app.py's /submit route
         alert('stop being deadass fam and write fr gng');
         return;
     }
@@ -143,7 +157,6 @@ async function submitAnswer() {
 
     btn.disabled = true;
     btn.textContent = '...gradin ts...';
-    // disabling + relabeling the button gives feedback that the click registered and stops a double-submit while the request is in flight
 
     const feedbackBox = document.getElementById('feedback-box');
     const feedbackText = document.getElementById('feedback-text');
@@ -155,10 +168,8 @@ async function submitAnswer() {
     breakdownText.textContent = '';
     document.getElementById('score-display').textContent = '';
     document.getElementById('next-btn').style.display = 'none';
-    // resets the whole feedback panel to a loading state b4 the fetch, so old feedback from the previous question doesn't flash on screen
 
     feedbackBox.scrollIntoView({behavior: 'smooth'});
-    // scrolls the feedback panel into view immediately since it may be below the fold on smaller screens
 
     try {
         const res = await fetch('/submit', {
@@ -167,11 +178,13 @@ async function submitAnswer() {
             body: JSON.stringify({role: role, answer: answer})
         });
 
-        if (!res.ok) throw new Error('gradin ts failed');
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `grading failed (${res.status})`);
+        }
         const data = await res.json();
 
         feedbackText.classList.remove('loading');
-        // clears the 'loading' class so the italic/dim loading style goes away
         feedbackText.textContent = data.feedback;
         breakdownText.textContent = data.breakdown;
         
@@ -183,15 +196,13 @@ async function submitAnswer() {
         document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
 
         document.getElementById('next-btn').style.display = 'block';
-        // only reveal "next question once grading acc succeeded"
 
-        // show AI improve button after successful submit
         document.getElementById('improve-btn').style.display = 'block';
 
     } catch (err) {
-        feedbackText.textContent = 'ye cant reach testube or flask or smth, fah';
+        console.error('Submit failed:', err);
+        feedbackText.textContent = 'Failed to submit answer. Please try again.';
     } finally {
-        // finally block runs whether the try succeeded or failed so the button always gets re-enabled and doesn't stay stuck
         btn.disabled = false;
         btn.textContent = 'SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS';
     }
@@ -222,13 +233,17 @@ async function skipQuestion() {
 
 // State for correction modal
 // (declared at top of file)
-
 async function improveAnswer() {
+    if (!role) {
+        alert('Role not specified. Please reload the page.');
+        return;
+    }
+
     const answer = document.getElementById('user-answer').value.trim();
     if (answer.length < 20) {
         alert('write more first dawg');
         return;
-    }
+    } 
 
     const btn = document.getElementById('improve-btn');
     btn.disabled = true;
@@ -241,7 +256,10 @@ async function improveAnswer() {
             body: JSON.stringify({role: role, answer: answer})
         });
 
-        if (!res.ok) throw new Error('improvement failed');
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `improvement failed (${res.status})`);
+        }
         const data = await res.json();
 
         currentImproved = data.improved;
@@ -249,7 +267,8 @@ async function improveAnswer() {
         showCorrection(data.explanation, data.changes);
 
     } catch (err) {
-        alert('AI correction failed bruh');
+        console.error('AI correction failed:', err);
+        alert(err.message || 'AI correction failed');
     } finally {
         btn.disabled = false;
         btn.textContent = 'AI IMPROVE MY ANSWER';

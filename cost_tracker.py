@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from datetime import date
 from threading import Lock
 
@@ -20,8 +21,11 @@ class CostTracker:
 
     def _load(self):
         if os.path.exists(self.storage_path):
-            with open(self.storage_path) as f:
-                data = json.load(f)
+            try:
+                with open(self.storage_path) as f:
+                    data = json.load(f)
+            except json.JSONDecodeError:
+                data = {}
             self.daily_spend = data.get("daily_spend", 0.0)
             self.monthly_spend = data.get("monthly_spend", 0.0)
             self.last_day = data.get("last_day")
@@ -34,13 +38,19 @@ class CostTracker:
 
     def _save(self):
         with self._lock:
-            with open(self.storage_path, "w") as f:
+            # Atomic write: write to temp file then rename
+            dir_name = os.path.dirname(self.storage_path) or "."
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=dir_name, delete=False, suffix=".tmp"
+            ) as tmp:
                 json.dump({
                     "daily_spend": self.daily_spend,
                     "monthly_spend": self.monthly_spend,
                     "last_day": self.last_day,
                     "last_month": self.last_month,
-                }, f)
+                }, tmp)
+                tmp_path = tmp.name
+            os.replace(tmp_path, self.storage_path)
 
     def _reset_if_new_period(self):
         today = str(date.today())

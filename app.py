@@ -19,11 +19,13 @@ app = Flask(__name__, static_folder='.')
 QUESTION_FILE = os.path.join(os.path.dirname(__file__), 'questions.json')
 
 try:
-
     with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
         ROLE_DATA = json.load(f)['roles']
-except FileExistsError:
-    print(f"ERROR:- {QUESTION_FILE} not found. Exiting the website")
+except FileNotFoundError:
+    print(f"ERROR: {QUESTION_FILE} not found. Exiting.")
+    exit(1)
+except json.JSONDecodeError as e:
+    print(f"ERROR: Invalid JSON in {QUESTION_FILE}: {e}")
     exit(1)
 
 QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
@@ -213,6 +215,7 @@ def session_submit():
         feedback, points, breakdown = grade(role, answer, question)
         grader = "rule"
 
+    user_id = session['user_id']
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
     user_record['points'].append(points)
     user_record['by_role'].setdefault(role, []).append(points)
@@ -385,15 +388,15 @@ def correct():
     
     result = ai_correct(role, question, answer, meta, feedback)
 
-    if not result:
-        return jsonify({'error': 'Correction unavailable'}), 503
+    if not result or "error" in result:
+        error_msg = result.get("message", "Correction unavailable") if result else "Correction unavailable"
+        return jsonify({'error': error_msg}), 503
 
     return jsonify({
         'improved': result['improved_answer'],
         'changes': result['changes'],
         'explanation': result['explanation']
     })
-
 
 @app.route('/status')
 def get_status():
