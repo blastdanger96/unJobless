@@ -381,7 +381,7 @@ def correct():
     
     # First get the grading feedback
     ai_result = ai_grade(role, question, answer, meta)
-    if ai_result:
+    if ai_result and "error" not in ai_result:
         feedback = ai_result["feedback"]
     else:
         feedback, _, _ = grade(role, answer, question)
@@ -395,7 +395,7 @@ def correct():
     return jsonify({
         'improved': result['improved_answer'],
         'changes': result['changes'],
-        'explanation': result['explanation']
+        'explanation': result.get('explanation') or result.get('key_improvements', ['Rule-based improvement applied'])
     })
 
 @app.route('/status')
@@ -683,7 +683,7 @@ def get_roles():
     ])
 
 
-#if __name__ == '__main__':
-#    print(f"unst.J0e_bless running on localhost:8000 | {len(QUESTIONS)} roles | {sum(len(v) for v in QUESTIONS.values())} questions fetched")
-#   app.run(debug=True, port=8000)
+if __name__ == '__main__':
+    print(f"unst.J0e_bless running on localhost:8000 | {len(QUESTIONS)} roles | {sum(len(v) for v in QUESTIONS.values())} questions fetched")
+    app.run(debug=True, port=8000)
 
