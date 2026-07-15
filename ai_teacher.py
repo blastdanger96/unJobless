@@ -8,10 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
-AI_MODEL = os.getenv("AI_MODEL", "llama-3.3-70b-versatile")
+AI_MODEL = os.getenv("AI_MODEL", "claude-sonnet-4-5-20250929")
 AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "8"))
-
-_client = None
 
 _failure_count = 0
 _circuit_open_until = 0
@@ -62,46 +60,49 @@ SCORING GUIDE:
 FEEDBACK STYLE: Direct, constructive, interviewer tone. Mention specific strengths/gaps.
 BREAKDOWN: Bullet points of what was covered vs missed."""
 
+
 SYSTEM_PROMPT = _load_system_prompt()
 
 
-def _build_prompt(role: str, question: str, answer: str, meta: dict) -> list[dict]:
-    """Build msgs array for OpenAI chat completion."""
+def _build_prompt(role: str, question: str, answer: str, meta: dict) -> str:
     keywords = meta.get("keywords", [])
     concepts = meta.get("concepts", [])
     mistakes = meta.get("common_mistakes", [])
     ideal = meta.get("ideal_length", 80)
 
-    user_content = (
+    return (
         f"""Role: {role}"
-        Question: {question}"
-        Target Length: {ideal} words"
-        Core concepts: {concepts}"
-        Important Keywords: {keywords}"
-        Common mistakes: {mistakes}"
-        Candidate answer: {answer}"""
+Question: {question}"
+Target Length: {ideal} words"
+Core concepts: {concepts}"
+Important Keywords: {keywords}"
+Common mistakes: {mistakes}"
+Candidate answer: {answer}"""
     )
 
-    return [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_content},
-    ]
+
+def _get_claude_client():
+    import anthropic
+    return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
-def _get_client():
-    global _client
-    if _client is None:
-        from openai import OpenAI
-        _client = OpenAI(
-            api_key=os.getenv("GROQ_API_KEY"),
-            base_url="https://api.groq.com/openai/v1",
-            timeout=AI_TIMEOUT,
-        )
-    return _client
+def _strip_markdown_fences(text: str) -> str:
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if len(lines) >= 3 and lines[0].startswith("```"):
+            text = "\n".join(lines[1:-1])
+    return text.strip()
+
+
+def _extract_text_from_response(resp) -> str:
+    for block in resp.content:
+        if hasattr(block, "text") and block.text:
+            return _strip_markdown_fences(block.text)
+    return ""
 
 
 def _rule_based_grade(role: str, question: str, answer: str, meta: dict) -> dict:
-    """Fallback grading using simple rules when AI is unavailable."""
     from app import grade as rule_grade
     feedback, points, breakdown = rule_grade(role, answer, question)
     return {
@@ -117,14 +118,7 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
 
     if not AI_ENABLED:
         return None
-    if not os.getenv("GROQ_API_KEY"):
-        return None
-
-    from cost_tracker import get_cost_tracker
-    tracker = get_cost_tracker()
-    status = tracker.get_status()
-    if status["over_daily"] or status["over_monthly"]:
-        logger.warning("AI budget exceeded, falling back to rule-based")
+    if not os.getenv("ANTHROPIC_API_KEY"):
         return None
 
     if not _check_circuit():
@@ -132,26 +126,20 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         return _rule_based_grade(role, question, answer, meta)
 
     try:
-        messages = _build_prompt(role, question, answer, meta)
-        client = _get_client()
+        prompt = _build_prompt(role, question, answer, meta)
+        client = _get_claude_client()
 
-        resp = client.chat.completions.create(
+        resp = client.messages.create(
             model=AI_MODEL,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=400,
-            response_format={"type": "json_object"},
+            max_tokens=1024,
+            temperature=0.2,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}]
         )
 
         latency_ms = int((time.time() - start_time) * 1000)
-        tokens_in = resp.usage.prompt_tokens
-        tokens_out = resp.usage.completion_tokens
 
-        within_budget = tracker.record(AI_MODEL, tokens_in, tokens_out)
-        if not within_budget:
-            logger.warning("Budget exceeded after this request")
-
-        content = resp.choices[0].message.content
+        content = _extract_text_from_response(resp)
         result = json.loads(content)
 
         if not all(k in result for k in ("feedback", "points", "breakdown")):
@@ -162,8 +150,8 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         _record_success()
 
         result["_meta"] = {
-            "tokens_in": tokens_in,
-            "tokens_out": tokens_out,
+            "tokens_in": resp.usage.input_tokens,
+            "tokens_out": resp.usage.output_tokens,
             "latency_ms": latency_ms,
             "model": AI_MODEL,
             "prompt_version": os.getenv("PROMPT_VERSION", "v1.0"),
@@ -171,7 +159,7 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         }
 
         logger.info(f"AI graded: role={role} points={result['points']} "
-                    f"tokens={tokens_in}/{tokens_out} latency={latency_ms}ms")
+                    f"tokens={resp.usage.input_tokens}/{resp.usage.output_tokens} latency={latency_ms}ms")
 
         return result
 
@@ -180,7 +168,7 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         logger.error(f"AI grading failed: {e} (latency={latency_ms}ms)")
         _record_failure()
         error_str = str(e).lower()
-        if "insufficient_quota" in error_str or "quota" in error_str or "billing" in error_str or "429" in error_str:
+        if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
             logger.warning("Quota exceeded, falling back to rule-based grading")
             return _rule_based_grade(role, question, answer, meta)
         return _rule_based_grade(role, question, answer, meta)
@@ -207,13 +195,13 @@ RULES:
 - changes array should have 3-8 items max"""
 
 
-def _build_correct_prompt(role: str, question: str, answer: str, meta: dict, feedback: str) -> list[dict]:
+def _build_correct_prompt(role: str, question: str, answer: str, meta: dict, feedback: str) -> str:
     keywords = meta.get("keywords", [])
     concepts = meta.get("concepts", [])
     mistakes = meta.get("common_mistakes", [])
     ideal = meta.get("ideal_length", 80)
 
-    user_content = (
+    return (
         f"""Role: {role}"
 Question: {question}"
 Target Length: {ideal} words"
@@ -224,49 +212,38 @@ Candidate answer: {answer}"
 Current feedback: {feedback}"""
     )
 
-    return [
-        {"role": "system", "content": CORRECT_SYSTEM_PROMPT},
-        {"role": "user", "content": user_content},
-    ]
-
 
 def _rule_based_correct(role: str, question: str, answer: str, meta: dict, feedback: str) -> dict:
-    """Fallback correction using simple rules when AI is unavailable."""
     improved = answer.strip()
     changes = []
-    
-    # Ensure ends with period
+
     if improved and not improved[-1] in '.!?':
         improved += '.'
         changes.append({"type": "add", "original": "", "improved": ".", "reason": "Add proper sentence ending"})
-    
-    # Add keywords from meta if missing
+
     keywords = meta.get("keywords", [])
     for kw in keywords[:3]:
         if kw.lower() not in improved.lower():
             improved += f" Key concept: {kw}."
             changes.append({"type": "add", "original": "", "improved": f" Key concept: {kw}.", "reason": f"Include missing keyword: {kw}"})
-    
-    # Add structure transition if missing
+
     transitions = ["First", "Second", "Finally", "However", "In addition"]
     has_transition = any(t.lower() in improved.lower() for t in transitions)
     if not has_transition and len(improved.split('.')) > 1:
         improved = "First, " + improved[0].lower() + improved[1:]
         changes.append({"type": "replace", "original": improved[:6], "improved": "First, ", "reason": "Add structural transition"})
-    
-    # Add concrete example placeholder if feedback suggests it
+
     if "example" in feedback.lower() and "example" not in improved.lower():
         improved += " For example, consider a practical scenario demonstrating this concept."
         changes.append({"type": "add", "original": "", "improved": " For example, consider a practical scenario demonstrating this concept.", "reason": "Add concrete example as suggested by feedback"})
-    
-    # Fix common grammar issues
+
     if " i " in f" {improved.lower()} ":
         improved = improved.replace(" i ", " I ")
         changes.append({"type": "replace", "original": " i ", "improved": " I ", "reason": "Capitalize first-person pronoun"})
-    
+
     return {
         "improved_answer": improved,
-        "changes": changes[:6],  # limit to 6 changes
+        "changes": changes[:6],
         "key_improvements": [c["reason"] for c in changes[:4]],
         "_meta": {"fallback": "rule_based"}
     }
@@ -277,41 +254,28 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
 
     if not AI_ENABLED:
         return None
-    if not os.getenv("GROQ_API_KEY"):
+    if not os.getenv("ANTHROPIC_API_KEY"):
         return None
-
-    from cost_tracker import get_cost_tracker
-    tracker = get_cost_tracker()
-    status = tracker.get_status()
-    if status["over_daily"] or status["over_monthly"]:
-        logger.warning("AI budget exceeded, falling back to rule-based correction")
-        return _rule_based_correct(role, question, answer, meta, feedback)
 
     if not _check_circuit():
         logger.warning("Circuit breaker open, falling back to rule-based correction")
         return _rule_based_correct(role, question, answer, meta, feedback)
 
     try:
-        messages = _build_correct_prompt(role, question, answer, meta, feedback)
-        client = _get_client()
+        prompt = _build_correct_prompt(role, question, answer, meta, feedback)
+        client = _get_claude_client()
 
-        resp = client.chat.completions.create(
+        resp = client.messages.create(
             model=AI_MODEL,
-            messages=messages,
-            temperature=0.3,
-            max_tokens=600,
-            response_format={"type": "json_object"},
+            max_tokens=1024,
+            temperature=0.2,
+            system=CORRECT_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}]
         )
 
         latency_ms = int((time.time() - start_time) * 1000)
-        tokens_in = resp.usage.prompt_tokens
-        tokens_out = resp.usage.completion_tokens
 
-        within_budget = tracker.record(AI_MODEL, tokens_in, tokens_out)
-        if not within_budget:
-            logger.warning("Budget exceeded after correction request")
-
-        content = resp.choices[0].message.content
+        content = _extract_text_from_response(resp)
         result = json.loads(content)
 
         if not all(k in result for k in ("improved_answer", "changes", "key_improvements")):
@@ -320,14 +284,14 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
         _record_success()
 
         result["_meta"] = {
-            "tokens_in": tokens_in,
-            "tokens_out": tokens_out,
+            "tokens_in": resp.usage.input_tokens,
+            "tokens_out": resp.usage.output_tokens,
             "latency_ms": latency_ms,
             "model": AI_MODEL,
             "prompt_version": os.getenv("PROMPT_VERSION", "v1.0"),
         }
 
-        logger.info(f"AI corrected: role={role} tokens={tokens_in}/{tokens_out} latency={latency_ms}ms")
+        logger.info(f"AI corrected: role={role} tokens={resp.usage.input_tokens}/{resp.usage.output_tokens} latency={latency_ms}ms")
         return result
 
     except Exception as e:
@@ -335,7 +299,7 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
         logger.error(f"AI correction failed: {e} (latency={latency_ms}ms)")
         _record_failure()
         error_str = str(e).lower()
-        if "insufficient_quota" in error_str or "quota" in error_str or "billing" in error_str or "429" in error_str:
+        if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
             logger.warning("Quota exceeded, falling back to rule-based correction")
             return _rule_based_correct(role, question, answer, meta, feedback)
         return _rule_based_correct(role, question, answer, meta, feedback)
