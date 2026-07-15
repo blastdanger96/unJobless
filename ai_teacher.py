@@ -117,9 +117,9 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
     start_time = time.time()
 
     if not AI_ENABLED:
-        return None
+        return _rule_based_grade(role, question, answer, meta)
     if not os.getenv("ANTHROPIC_API_KEY"):
-        return None
+        return _rule_based_grade(role, question, answer, meta)
 
     if not _check_circuit():
         logger.warning("Circuit breaker open, falling back")
@@ -253,9 +253,9 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
     start_time = time.time()
 
     if not AI_ENABLED:
-        return None
+        return _rule_based_correct(role, question, answer, meta, feedback)
     if not os.getenv("ANTHROPIC_API_KEY"):
-        return None
+        return _rule_based_correct(role, question, answer, meta, feedback)
 
     if not _check_circuit():
         logger.warning("Circuit breaker open, falling back to rule-based correction")
