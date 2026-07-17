@@ -555,37 +555,38 @@ def build_feedback(points, word_count, ideal_length,
     lines = []
 
     if points == 3:
-        lines.append("Well done smartass, you sound like you know your shi and you got the examples to back it up, gg gng")
+        #lines.append("Well done smartass, you sound like you know your shi and you got the examples to back it up, gg gng")
+        lines.append("Very well done, you have scored full marks for this question because of your enhanced ability to solve application-based questions, usually asked in interviews.")
         if keyword_hits:
-            lines.append(f"Good job for using key terms like: {', '.join(keyword_hits)}.")
+            lines.append(f"u have also elaborated on various key terms correctly such as: {', '.join(keyword_hits)}.")
         if not has_example:
-            lines.append("aint no way dawg, gj but it could be better icl, missing an example")
+            lines.append("u could've also worked on using some examples, interviewers do look for that, so they are also as much important as the explaination! ")
 
     elif points == 2:
-        lines.append("yeah u could do sm better, put in sm effort for god's sake, its for ur own job")
+        lines.append("Good job, you have done quite well, definitely could have done better cuz u got the potential fs but not badd.")
         missed_keywords = [k for k in keywords if k not in keyword_hits][:3]
         if missed_keywords:
-            lines.append(f"u missed sm key terms icl, so improve here or else ur cooked dawg: {', '.join(missed_keywords)}.")
+            lines.append(f"u rlly should consider using these missed keywords in ur code for tht perfect answer {', '.join(missed_keywords)}.")
         if not has_example:
-            lines.append("dont keep yappin bru its givin needy, give sm examples to make this answer more goated")
+            lines.append("try adding examples, interviewers prefer that over yap, it shows u can apply stuff irl soo")
         if word_count < ideal_length * 0.7:
-            lines.append("yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer")
+            lines.append("okay not tht consise, you still have to mention all the key terms and important things, make sure to include examples.")
 
     elif points == 1:
-        lines.append("ye study harder this aint js it bru")
+        lines.append("okay see now you could do soo much better than this, u definitely got the potential in u")
         if word_count < ideal_length * 0.5:
-            lines.append("yap a lil more dawg or else the interviewer will kick u out as fast as u finished tht answer")
+            lines.append("okay not tht consise, you still have to mention all the key terms and important things, make sure to include examples.")
         missed_concepts = [c for c in concepts if c not in concept_hits][:3]
         if missed_concepts:
-            lines.append(f"u had many key ideas missin, tht aint finna gibbu a job unless u yap abt em: {', '.join(missed_concepts)}.")
+            lines.append(f" u hv missed out on many critical ideas and words you need to give an explaination for {', '.join(missed_concepts)}.")
         if not has_example:
-            lines.append("use examples bru or else they aint finna let u slide")
+            lines.append("use examples bru, interviewers prefer that over yap, it shows u can apply stuff irl soo ")
 
     else:
-        lines.append("man ts is so wrong, go back and study fr gng or u finna be jobless ash")
-        lines.append("start with the definition. explain how it works. give an example and dont fumble gng")
+        lines.append("yeah im sry this is completely wrong, you have been unable to answer the question with the needed key terms, better bring ur A game to this next time!")
+        lines.append("start with the definition. explain how it works. give an example which shows how you apply it in the real world.")
         if keywords:
-            lines.append(f"use terms like this lil bru: {', '.join(keywords[:4])}.")
+            lines.append(f"use terms like this (for reference):- {', '.join(keywords[:4])}.")
 
     return " ".join(lines)
 
@@ -631,21 +632,21 @@ def basic_grade(answer: str) -> tuple:
     words = len(answer.split())
 
     if words < 30:
-        feedback = "u are absolutely jobless fam try to yap more and give examples or else u finna be homeless ash"
+        feedback = "u hv to elaborate more on key terms related to the question, this js ain't gonna cut it."
         points = 0
         breakdown = "- answer is too short, add more detail and examples"
     elif words < 80:
-        feedback = "bro u gotta yap more to get a job, add more detail and examples or else u finna be homeless ash"
+        feedback = "okay had u added a few more points and explained them in detail, you very well could have easily done so much better. Believe in urself u got this!"
         points = 1
-        breakdown = "~ decent attempt but light on detail, add more substance"
+        breakdown = "decent attempt but light on detail, add more substance"
     elif words < 150:
-        feedback = "ye no ts fr gng, on ur way to landin on a hot bag, keep cookin"
+        feedback = "yoo ts is firee, on ur way to landin on a hot bag, keep cookin bro"
         points = 2
-        breakdown = "+ decent shi ngl\n~ could use more specificity to really seal it"
+        breakdown = "+ decent shi ngl could use more specificity to really seal it tho but eh u got this dw"
     else:
-        feedback = "ma goat man u finally locked in on ts and u sound like u know ur shi, gg gng"
+        feedback = "my goat man u finally locked in on ts and u sound like u know ur shi, gg gng, u gonna rock tht interview"
         points = 3
-        breakdown = "+ thorough answer with good depth, gg gng"
+        breakdown = "+ thorough answer with good depth, good stuff bro"
 
     if not has_example:
         breakdown += "\n- no example detected, always back up your answer with one"
