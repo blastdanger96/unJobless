@@ -71,7 +71,9 @@ body {
 .dialog-box.hidden, #feedback-box.hidden {
     display: none;
 }
-
+:popover-open {
+    
+}
 .dialog-speaker {
     font-family: 'Press Start 2P', monospace;
     font-size: 0.6rem;
@@ -79,6 +81,7 @@ body {
     letter-spacing: 3px;
     margin-bottom: 12px;
 }
+
 
 .next-btn, #next-btn {
     border: 3px solid #1a1a1a;
@@ -337,6 +340,24 @@ textarea:focus {border-color: #2b7c2f;}
 
 #correction-modal.hidden { display: none; }
 
+.hide-timer-btn {
+    display: block;
+    width: 100%;
+    margin-top: 7.5px;
+    padding: 7.5px;
+    border: 2.5px solid #ddd;
+    background-color: #fff;
+    colour: #666;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.25rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.5s;
+}
+.hide-timer-btn:hover {
+    border-color: #c00;
+    color: #c00;
+}
 .modal-overlay {
     position: absolute;
     inset: 0;
@@ -476,5 +497,19 @@ textarea:focus {border-color: #2b7c2f;}
 
 .modal-footer button:first-child:hover {
     background: #1a1a1a;
+    color: #fff;
+}
+
+#timer-box.timer-hidden #timer-display, #timer-box.timer-hidden.timer-track{
+    display: none;
+}
+
+#timer-box.timer-hidden.hide-timer-btn{
+    border: #2b7c2f;
+    color: #2b7c2f;
+}
+
+#timer-box.timer-hidden.hide-timer-btn:hover {
+    background: #2b7c2f;
     color: #fff;
 }

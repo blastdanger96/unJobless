@@ -5,11 +5,14 @@ let questionsAnswered = 0;
 let timeRemaining = 90;
 let timerInterval = null;
 const timer_sec = 90;
+let timerHidden = false;
 
 // correction state
 let currentImproved = '';
 let currentChanges = [];
-
+// submit state of submittion
+let isSubmitting = false;
+let submitAbortControl = null;
 
 async function init() {
     const params = new URLSearchParams(window.location.search);
@@ -18,7 +21,9 @@ async function init() {
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
+            if (!isSubmitting) {
             submitAnswer();
+            }
         }
     });
 
@@ -49,6 +54,9 @@ if (document.readyState === 'loading') {
 
 window.addEventListener('beforeunload', () => {
     stopTimer();
+    if (submitAbortControl) {
+        submitAbortControl.abort();
+    }
 });
 
 async function loadQuestion() {
@@ -56,6 +64,11 @@ async function loadQuestion() {
         document.getElementById('question-display').innerHTML = 'Error: No role specified';
         return;
     }
+
+    timerHidden = false;
+    document.getElementById('timer-box').classList.remove('timer-hidden');
+    document.getElementById('hide-timer-btn').textContent = 'HIDE TIMER';
+    document.getElementById('hide-timer-btn').onclick = hideTimer;
     try {
         const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
         if (!res.ok) throw new Error(`Failed to load question (${res.status})`);
@@ -79,6 +92,7 @@ async function loadQuestion() {
 }
 
 async function startTimer() {
+    if (timerHidden) return;
     if (timerInterval) clearInterval(timerInterval);
     timeRemaining = timer_sec;
     updateDisplay();
@@ -93,6 +107,24 @@ async function startTimer() {
             handleTime();
         }
     }, 1000);
+}
+
+function hideTimer() {
+    timerHidden = true;
+    stopTimer();
+    document.getElementById('timer-box').classList.add('timer-hidden');
+    const btn = document.getElementById('hide-timer-btn');
+    btn.textContent = 'SHOW TIMER';
+    btn.onclick = showTimer;
+}
+
+function showTimer() {
+    timerHidden = false;
+    document.getElementById('timer-box').classList.remove('timer-hidden');
+    const btn = document.getElementById('hide-timer-btn');
+    btn.textContent = 'HIDE TIMER';
+    btn.onclick = hideTimer;
+    startTimer(); 
 }
 
 function stopTimer() {
@@ -128,6 +160,10 @@ function updateDisplay() {
 }
 
 function handleTime () {
+    if (isSubmitting) {
+        console.log('Manual submit in progress, skipping auto-submit');
+        return;
+    }
     const answer = document.getElementById('user-answer').value.trim();
     if (answer.length >= 20) {
         submitAnswer();
@@ -137,8 +173,12 @@ function handleTime () {
     }
 }
 
-
 async function submitAnswer() {
+    if (isSubmitting) {
+        console.log('Submit already in progress, ignoring');
+        return;
+    }
+    isSubmitting = true;
     if (!role) {
         alert('Role not specified. Please reload the page with a valid role.');
         return;
@@ -152,9 +192,10 @@ async function submitAnswer() {
     }
 
     stopTimer();
+    submitAbortControl = new AbortController();
+    const signal = submitAbortControl.signal;
 
     const btn = document.getElementById('submit-btn');
-
     btn.disabled = true;
     btn.textContent = '...gradin ts...';
 
@@ -175,8 +216,14 @@ async function submitAnswer() {
         const res = await fetch('/submit', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({role: role, answer: answer})
+            body: JSON.stringify({role: role, answer: answer}),
+            signal
         });
+
+        if (signal.aborted) {
+            console.log('Submit aborted');
+            return;
+        }
 
         if (!res.ok) {
             const errData = await res.json().catch(() => ({}));
@@ -196,21 +243,36 @@ async function submitAnswer() {
         document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
 
         document.getElementById('next-btn').style.display = 'block';
-
         document.getElementById('improve-btn').style.display = 'block';
 
-    } catch (err) {
+    } catch (err) { 
+        if (err.name === 'AbortError' || signal.aborted) {
+            console.log('Submit aborted');
+            return;
+        }
         console.error('Submit failed:', err);
         feedbackText.textContent = 'Failed to submit answer. Please try again.';
+
     } finally {
+        if (!signal.aborted) {
         btn.disabled = false;
         btn.textContent = 'SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS';
+        }
+
+        isSubmitting = false;
+        submitAbortControl = null;
     }
 }
 
 async function nextQuestion() {
+    if (submitAbortControl) {
+        submitAbortControl.abort();
+        submitAbortControl = null;
+    } 
+    isSubmitting = false;
+
     document.getElementById('user-answer').value = '';
-    document.getElementById('word-count').textContent = '0';
+    document.getElementById('word-count').textContent = '0'; 
     document.getElementById('word-count-label').className = '';
     // resets the word count display back to its default (non-"good") styling
     
@@ -222,6 +284,13 @@ async function nextQuestion() {
 
 async function skipQuestion() {
     stopTimer();
+
+    if (submitAbortControl) {
+        submitAbortControl.abort();
+        submitAbortControl = null;
+    }
+    isSubmitting = false;
+
     document.getElementById('user-answer').value = '';
     document.getElementById('word-count').textContent = '0';
     document.getElementById('word-count-label').className = '';
@@ -231,8 +300,6 @@ async function skipQuestion() {
     loadQuestion();
 }
 
-// State for correction modal
-// (declared at top of file)
 async function improveAnswer() {
     if (!role) {
         alert('Role not specified. Please reload the page.');
@@ -313,4 +380,3 @@ function closeCorrection() {
     currentImproved = '';
     currentChanges = [];
 }
-
