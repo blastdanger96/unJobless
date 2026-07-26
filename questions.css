@@ -71,9 +71,7 @@ body {
 .dialog-box.hidden, #feedback-box.hidden {
     display: none;
 }
-:popover-open {
     
-}
 .dialog-speaker {
     font-family: 'Press Start 2P', monospace;
     font-size: 0.6rem;
@@ -347,7 +345,7 @@ textarea:focus {border-color: #2b7c2f;}
     padding: 7.5px;
     border: 2.5px solid #ddd;
     background-color: #fff;
-    colour: #666;
+    color: #666;
     font-family: 'Press Start 2P', monospace;
     font-size: 0.25rem;
     letter-spacing: 1px;
@@ -504,6 +502,7 @@ textarea:focus {border-color: #2b7c2f;}
     display: none;
 }
 
+
 #timer-box.timer-hidden.hide-timer-btn{
     border: #2b7c2f;
     color: #2b7c2f;
@@ -512,4 +511,6 @@ textarea:focus {border-color: #2b7c2f;}
 #timer-box.timer-hidden.hide-timer-btn:hover {
     background: #2b7c2f;
     color: #fff;
+
 }
+
