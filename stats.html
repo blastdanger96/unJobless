@@ -9,45 +9,54 @@
         <link rel="stylesheet" href="./stats.css">
     </head>
     <body>
-        <header class="stats-header">
-            <a href = "index.html" class="back"><- BACK</a>
-            <h1> PROGRESS </h1>
-            <p id="stats-subtitle">// YOUR INTERVIEW JOURNEY //</p>
-        </header>
+        <div id="lock-screen" class="lock-screen hidden">
+            <h2>🔒 PROGRESS LOCKED</h2>
+            <p>Answer <span id="lock-required">5</span> questions to unlock stats</p>
+            <p>You've answered: <span id="lock-answered">0</span> / <span id="lock-required2">5</span></p>
+            <a id="lock-start-btn" href="questions.html?role=Software%20Engineer">START PRACTICING →</a>
+        </div>
 
-        <section class="stats-summary">
-            <div class="stat-card"><span id="stat-total-qs">0</span><label>QUESTIONS</label></div>
-            <div class="stat-card"><span id="stat-avg">0.0</span><label>AVG SCORE</label></div>
-            <div class="stat-card"><span id="start-streak">0</span><label>STREAK</label></div>
-            <div class="stat-card"><span id="stat-best-role">-</span><label>BEST ROLE</label></div>
-        </section>
+        <div id="stats-content" class="hidden">
+            <header class="stats-header">
+                <a href = "index.html" class="back"><- BACK</a>
+                <h1> PROGRESS </h1>
+                <p id="stats-subtitle">// YOUR INTERVIEW JOURNEY //</p>
+            </header>
 
-        <section class="charts-grid">
-            <div class="chart-container">
-                <h3>SCORE OVER TIME</h3>
-                <canvas id="chart-time-series"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>BY ROLE</h3>
-                <canvas id="chart-by-role"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>BY DIFFICULTY</h3>
-                <canvas id="chart-by-difficulty"></canvas>
-            </div>
-            <div class="chart-container">
-                <h3>SCORE DISTRIBUTION</h3>
-                <canvas id="chart-distribution"></canvas>
-            </div>
-        </section>
+            <section class="stats-summary">
+                <div class="stat-card"><span id="stat-total-qs">0</span><label>QUESTIONS</label></div>
+                <div class="stat-card"><span id="stat-avg">0.0</span><label>AVG SCORE</label></div>
+                <div class="stat-card"><span id="start-streak">0</span><label>STREAK</label></div>
+                <div class="stat-card"><span id="stat-best-role">-</span><label>BEST ROLE</label></div>
+            </section>
 
-        <section class="stats-action">
-            <button id="export-all-json" class="export-btn">EXPORT ALL HISTORY</button>
-            <button id="export-all-pdf" class="export-btn pdf-btn">EXPORT ALL HISTORY (PDF)</button>
-        </section>
+            <section class="charts-grid">
+                <div class="chart-container">
+                    <h3>SCORE OVER TIME</h3>
+                    <canvas id="chart-time-series"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>BY ROLE</h3>
+                    <canvas id="chart-by-role"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>BY DIFFICULTY</h3>
+                    <canvas id="chart-by-difficulty"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>SCORE DISTRIBUTION</h3>
+                    <canvas id="chart-distribution"></canvas>
+                </div>
+            </section>
 
-        <div class="footer">
-            <span>unJobless v1.0</span>
+            <section class="stats-action">
+                <button id="export-all-json" class="export-btn" onclick="exportJSON()">EXPORT ALL HISTORY</button>
+                <button id="export-all-pdf" class="export-btn pdf-btn" onclick="exportPDF()">EXPORT ALL HISTORY (PDF)</button>
+            </section>
+
+            <div class="footer">
+                <span>unJobless v1.0</span>
+            </div>
         </div>
 
         <script src="./stats.js"></script>

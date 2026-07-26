@@ -247,6 +247,15 @@ def end_session():
         return jsonify({'error': 'invalid session'}), 401
 
     total = sum(q.get('points', 0) for q in session['questions'])
+    
+    user_id = session['user_id']
+    user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}, 'sessions': []})
+    user_record['sessions'].append({
+        'role': session['role'],
+        'completed_at': datetime.utcnow().isoformat(),
+        'questions': session['questions']
+    })
+
     return jsonify({
         'total_points': total,
         'questions_answered': len(session['questions']),
@@ -459,6 +468,201 @@ def history():
         'average': round(sum(data.get('points', [])) / len(data['points']), 2) if data.get('points') else 0,
         'by_role': data.get('by_role', {})
     })
+
+@app.route('/stats/unlock-status')
+def stats_unlock():
+    user_id, err = _require_auth()
+    if err:
+        return err
+    data = _user_scores.get(user_id, {})
+    answered = len(data.get('points', []))
+    return jsonify ({
+        'unlocked': answered >= 5,
+        'answered': answered,
+        'required': 5
+    })
+
+
+@app.route('/stats/summary')
+def stats_summary():
+    user_id, err = _require_auth()
+    if err:
+        return err
+    data = _user_scores.get(user_id, {})
+    points = data.get('points', [])
+    by_role = data.get('by_role', {})
+    total_q = len(points)
+    avg = round(sum(points) / total_q, 1) if total_q else 0.0
+    streak = _calc_streak(user_id)
+    best_role = max(by_role, key=lambda r: sum(by_role[r]) / len(by_role[r])) if by_role else '-'
+    return jsonify({
+        'total_questions': total_q,
+        'avg_score': avg,
+        'streak': streak,
+        'best_role': best_role
+    })
+
+
+def _calc_streak(user_id):
+    sessions = []
+    for u_id, sessions_data in _user_scores.items():
+        if u_id == user_id:
+            sessions = sessions_data.get('sessions', [])
+            break
+    if not sessions:
+        return 0
+    dates = set()
+    for s in sessions:
+        dt = s.get('completed_at', '')
+        if dt:
+            dates.add(dt[:10])
+    if not dates:
+        return 0
+    today = datetime.utcnow().date().isoformat()
+    yesterday = (datetime.utcnow().date() - timedelta(days=1)).isoformat()
+    current = today if today in dates else (yesterday if yesterday in dates else None)
+    if not current:
+        return 0
+    streak = 0
+    for d in sorted(dates, reverse=True):
+        if d == current:
+            streak += 1
+            current = (datetime.fromisoformat(current) - timedelta(days=1)).date().isoformat()
+        elif d < current:
+            break
+    return streak
+
+
+@app.route('/stats/chart-data')
+def stats_chart_data():
+    user_id, err = _require_auth()
+    if err:
+        return err
+    data = _user_scores.get(user_id, {})
+    points = data.get('points', [])
+    by_role = data.get('by_role', {})
+    sessions = data.get('sessions', [])
+    
+    time_series = []
+    for i, s in enumerate(sessions):
+        for q in s.get('questions', []):
+            time_series.append({
+                'index': len(time_series) + 1,
+                'date': s.get('completed_at', '')[:10],
+                'score': q.get('points', 0),
+                'role': s.get('role', ''),
+                'question': q.get('question', '')[:50]
+            })
+    
+    by_role_avg = {}
+    for role, scores in by_role.items():
+        by_role_avg[role] = round(sum(scores) / len(scores), 2)
+    
+    by_difficulty = {'easy': [], 'medium': [], 'hard': []}
+    for s in sessions:
+        role = s.get('role', '')
+        for q in s.get('questions', []):
+            q_text = q.get('question', '')
+            meta = next((qq for qq in QUESTIONS.get(role, []) if qq['q'] == q_text), {})
+            ideal = meta.get('ideal_length', 80)
+            if ideal <= 85:
+                diff = 'easy'
+            elif ideal <= 100:
+                diff = 'medium'
+            else:
+                diff = 'hard'
+            by_difficulty[diff].append(q.get('points', 0))
+    by_diff_avg = {}
+    for diff, scores in by_difficulty.items():
+        if scores:
+            by_diff_avg[diff] = round(sum(scores) / len(scores), 2)
+    
+    dist = {0: 0, 1: 0, 2: 0, 3: 0}
+    for p in points:
+        if p in dist:
+            dist[p] += 1
+    
+    return jsonify({
+        'time_series': time_series,
+        'by_role': by_role_avg,
+        'by_difficulty': by_diff_avg,
+        'distribution': dist
+    })
+
+
+@app.route('/stats/export/json')
+def stats_export_json():
+    user_id, err = _require_auth()
+    if err:
+        return err
+    data = _user_scores.get(user_id, {})
+    from flask import Response
+    return Response(
+        json.dumps(data, indent=2),
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename=unjobless_history_{user_id}.json'}
+    )
+
+
+@app.route('/stats/export/pdf')
+def stats_export_pdf():
+    user_id, err = _require_auth()
+    if err:
+        return err
+    data = _user_scores.get(user_id, {})
+    try:
+        from fpdf import FPDF
+    except ImportError:
+        return jsonify({'error': 'PDF generation not available'}), 503
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Helvetica', 'B', 20)
+    pdf.cell(0, 12, 'unJobless - Interview Report', ln=True, align='C')
+    pdf.set_font('Helvetica', '', 10)
+    pdf.cell(0, 7, f'User: {user_id}', ln=True, align='C')
+    pdf.cell(0, 7, f'Generated: {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}', ln=True, align='C')
+    pdf.ln(8)
+    
+    points = data.get('points', [])
+    by_role = data.get('by_role', {})
+    sessions = data.get('sessions', [])
+    total_q = len(points)
+    avg = round(sum(points) / total_q, 1) if total_q else 0.0
+    
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, 'Summary', ln=True)
+    pdf.set_font('Helvetica', '', 11)
+    pdf.cell(0, 7, f'Total Sessions: {len(sessions)}', ln=True)
+    pdf.cell(0, 7, f'Total Questions: {total_q}', ln=True)
+    pdf.cell(0, 7, f'Average Score: {avg}/3.0', ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Helvetica', 'B', 14)
+    pdf.cell(0, 10, 'Session History', ln=True)
+    for i, s in enumerate(sessions, 1):
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, f'Session {i} - {s.get("role", "Unknown")} - {s.get("completed_at", "")[:10]}', ln=True)
+        pdf.set_font('Helvetica', '', 10)
+        for j, q in enumerate(s.get('questions', []), 1):
+            pdf.cell(0, 6, f'  Q{j}: {q.get("question", "")[:80]}...', ln=True)
+            pdf.cell(0, 6, f'     Score: {q.get("points", 0)}/3', ln=True)
+            if q.get('feedback'):
+                pdf.set_font('Helvetica', 'I', 9)
+                pdf.multi_cell(0, 5, f'     Feedback: {q["feedback"][:120]}...')
+                pdf.set_font('Helvetica', '', 10)
+        pdf.ln(3)
+    
+    from io import BytesIO
+    buf = BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    from flask import Response
+    return Response(
+        buf.getvalue(),
+        mimetype='application/pdf',
+        headers={'Content-Disposition': f'attachment; filename=unjobless_report_{user_id}.pdf'}
+    )
 
 
 def score_ratio(hits, total, high, low):

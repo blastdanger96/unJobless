@@ -1,7 +1,7 @@
 // these 3 lives at module scope (not inside a function) so every function below can read and update them across the whole session
 let role = null;
 let score = 0;
-let questionsAnswered = 0;
+let questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
 let timeRemaining = 90;
 let timerInterval = null;
 const timer_sec = 90;
@@ -17,6 +17,7 @@ let submitAbortControl = null;
 async function init() {
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
+    questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -237,6 +238,17 @@ async function submitAnswer() {
         
         score += data.points;
         questionsAnswered += 1;
+        localStorage.setItem('q_answered', questionsAnswered);
+
+        if (questionsAnswered == 5) {
+            var btn = document.createElement('button');
+            btn.id = 'unblock-stats-btn';
+            btn.textContent = 'VIEW PROGRESS ->';
+            btn.className = 'export-btn';
+            btn.onclick = function() { location.href = 'stats.html';};
+            document.querySelector('.footer').appendChild(btn);
+
+        }
         
         document.getElementById('score').textContent = score;
         document.getElementById('q-count').textContent = questionsAnswered;
