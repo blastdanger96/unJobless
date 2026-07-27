@@ -21,25 +21,15 @@ async function init() {
     authToken = localStorage.getItem('auth_token');
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
-    await syncProgress();
-    const progressText = document.getElementById('progress-text');
-    const progressFill = document.getElementById('progress-fill');
-    function updateProgressUI() {
-        const progressText = document.getElementById('progress-text');
-        const progressFill = document.getElementById('progress-fill');
-        const qCounter = document.getElementById('q-counter');
-        const qCounterFooter = document.getElementById('q-count');
 
+    if (!role) {
+        alert('Role not specified. Please provide a role in the URL query parameters.');
+        return;
     }
-    if (progressFill && progressText) {
-        const current = questionsAnswered + 1;
-        progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
-        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
-        progressFill.style.width = pct + '%';
-    }
-    if (qCounter) qCounter.textContent = 'Q' + (questionsAnswered + 1);
-    if (qCounterFooter) qCounterFooter.textContent = questionsAnswered;
-    
+
+    await syncProgress();
+    updateProgressUI();
+
     await startSession();
     await loadQuestion();
 
@@ -49,14 +39,8 @@ async function init() {
             if (!isSubmitting) {
                 submitAnswer();
             }
-
         }
     });
-
-    if (!role) {
-        alert('Role not specified. Please provide a role in the URL query parameters.');
-        return;
-    }
 
     document.getElementById('role-title').textContent = role.toUpperCase();
     document.getElementById('role-subtitle').textContent = '//' + role + 'Interview //';
@@ -68,9 +52,22 @@ async function init() {
         el.textContent = count;
         el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
     });
+}
 
-    await startSession();
-    await loadQuestion();
+function updateProgressUI() {
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
+    const qCounter = document.getElementById('q-counter');
+    const qCounterFooter = document.getElementById('q-count');
+
+    if (progressFill && progressText) {
+        const current = questionsAnswered + 1;
+        progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
+        progressFill.style.width = pct + '%';
+    }
+    if (qCounter) qCounter.textContent = 'Q' + (questionsAnswered + 1);
+    if (qCounterFooter) qCounterFooter.textContent = questionsAnswered;
 }
 
 if (document.readyState === 'loading') {
@@ -91,7 +88,7 @@ async function startSession() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authToken
+            'Authorisation': 'Bearer ' + authToken
         },
         body: JSON.stringify({role})
     });
@@ -112,7 +109,7 @@ async function loadQuestion() {
 
     try {
         const res = await fetch('/session/question', {
-            headers: {'Authorization': 'Bearer ' + sessionToken}
+            headers: {'Authorisation': 'Bearer ' + sessionToken}
         });
         if (!res.ok) throw new Error(`Failed to load question (${res.status})`);
         const data = await res.json();
@@ -146,7 +143,7 @@ async function loadQuestion() {
 async function syncProgress() {
     try {
         const res = await fetch('/stats/unlock-status', {
-            headers: {'Authorisation': 'Bearer' + authToken}
+            headers: {'Authorisation': 'Bearer ' + authToken}
         });
         if (res.ok) {
             const data = await res.json();
@@ -181,6 +178,7 @@ async function startTimer() {
 
 function hideTimer() {
     timerHidden = true;
+    //u suck my di
     stopTimer();
     document.getElementById('timer-box').classList.add('timer-hidden');
     const btn = document.getElementById('hide-timer-btn');
@@ -286,7 +284,7 @@ async function submitAnswer() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + sessionToken
+                'Authorisation': 'Bearer ' + sessionToken
             },
             body: JSON.stringify({answer}),
             signal
@@ -399,7 +397,7 @@ async function improveAnswer() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + sessionToken
+                'Authorisation': 'Bearer ' + sessionToken
             },
             body: JSON.stringify({answer})
         });

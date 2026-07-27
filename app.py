@@ -55,7 +55,7 @@ def _verify_token(token: str):
         return None
 
 def _get_user_id():
-    auth = request.headers.get("Authorization", "")
+    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
     if not auth.startswith("Bearer "):
         return None
     return _verify_token(auth[7:])
@@ -165,7 +165,7 @@ def start_session():
 
 @app.route('/session/question', methods=['GET'])
 def session_question():
-    auth = request.headers.get('Authorization', '')
+    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
     if not auth.startswith('Bearer '):
         return jsonify({'error': 'unauthorized'}), 401
     token = auth[7:]
@@ -187,7 +187,7 @@ def session_question():
 
 @app.route('/session/submit', methods=['POST'])
 def session_submit():
-    auth = request.headers.get('Authorization', '')
+    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
     if not auth.startswith('Bearer '):
         return jsonify({'error': 'unauthorized'}), 401
     token = auth[7:]
@@ -238,7 +238,7 @@ def session_submit():
 
 @app.route('/session/end', methods=['POST'])
 def end_session():
-    auth = request.headers.get('Authorization', '')
+    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
     if not auth.startswith('Bearer '):
         return jsonify({'error': 'unauthorized'}), 401
     token = auth[7:]
@@ -278,7 +278,7 @@ def _get_session(token: str):
 
 def _get_session_from_request():
     """Extract session from Authorization header."""
-    auth = request.headers.get("Authorization", "")
+    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
     if auth.startswith("Bearer "):
         token = auth[7:]
         return _sessions.get(token)
