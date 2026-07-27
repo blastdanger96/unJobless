@@ -7,15 +7,17 @@ let timerInterval = null;
 const timer_sec = 90;
 let timerHidden = false;
 const SESSION_LENGTH = 5;
-
+let authToken = null;
+let sessionToken = null;
 // correction state
 let currentImproved = '';
 let currentChanges = [];
-// submit state of submittion
+// submit state of submission
 let isSubmitting = false;
 let submitAbortControl = null;
 
 async function init() {
+    authToken = localStorage.getItem('auth_token');
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
     questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
@@ -23,18 +25,18 @@ async function init() {
     const progressFill = document.getElementById('progress-fill');
     if (progressFill && progressText) {
         const current = questionsAnswered + 1;
-    progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
-    const pct = Math.min((current / Session_length) *100);
-    progressFill.style.width = pct + '%';
-
+        progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+        const pct = Math.min((current / SESSION_LENGTH) * 100);
+        progressFill.style.width = pct + '%';
     }
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
             if (!isSubmitting) {
-            submitAnswer();
+                submitAnswer();
             }
+            
         }
     });
 
@@ -53,6 +55,8 @@ async function init() {
         el.textContent = count;
         el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
     });
+
+    await startSession();
     await loadQuestion();
 }
 
@@ -69,6 +73,19 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
+async function startSession() {
+    const res = await fetch('/session/start', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + authToken
+        },
+        body: JSON.stringify({role})
+    });
+    const data = await res.json();
+    sessionToken = data.session_token;
+}
+
 async function loadQuestion() {
     if (!role) {
         document.getElementById('question-display').innerHTML = 'Error: No role specified';
@@ -79,8 +96,11 @@ async function loadQuestion() {
     document.getElementById('timer-box').classList.remove('timer-hidden');
     document.getElementById('hide-timer-btn').textContent = 'HIDE TIMER';
     document.getElementById('hide-timer-btn').onclick = hideTimer;
+
     try {
-        const res = await fetch(`/question?role=${encodeURIComponent(role)}`);
+        const res = await fetch('/session/question', {
+            headers: {'Authorization': 'Bearer ' + sessionToken}
+        });
         if (!res.ok) throw new Error(`Failed to load question (${res.status})`);
         const data = await res.json();
         document.getElementById('question-display').innerHTML =
@@ -175,7 +195,6 @@ function updateDisplay() {
         timerEl.classList.add('warning');
         timerFillEl.classList.add('warning');
     }
-
 }
 
 function handleTime () {
@@ -232,10 +251,13 @@ async function submitAnswer() {
     feedbackBox.scrollIntoView({behavior: 'smooth'});
 
     try {
-        const res = await fetch('/submit', {
+        const res = await fetch('/session/submit', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({role: role, answer: answer}),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + sessionToken
+            },
+            body: JSON.stringify({answer}),
             signal
         });
 
@@ -265,7 +287,6 @@ async function submitAnswer() {
             statBtn.className = 'export-btn';
             statBtn.onclick = function() { location.href = 'stats.html';};
             document.querySelector('.footer').appendChild(statBtn);
-
         }
         
         document.getElementById('score').textContent = score;
@@ -304,11 +325,9 @@ async function nextQuestion() {
     document.getElementById('user-answer').value = '';
     document.getElementById('word-count').textContent = '0'; 
     document.getElementById('word-count-label').className = '';
-    // resets the word count display back to its default (non-"good") styling
-    
+
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
-    // hides the old feedback b4 the new question's box
     await loadQuestion();
 }
 
@@ -349,8 +368,11 @@ async function improveAnswer() {
     try {
         const res = await fetch('/correct', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({role: role, answer: answer})
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + sessionToken
+            },
+            body: JSON.stringify({answer})
         });
 
         if (!res.ok) {
