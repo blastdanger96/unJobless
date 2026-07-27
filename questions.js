@@ -7,7 +7,7 @@ let timerInterval = null;
 const timer_sec = 90;
 let timerHidden = false;
 const SESSION_LENGTH = 5;
-const UNLOCK_THRESHOLD = 2;
+const UNLOCK_THRESHOLD = 1;
 let authToken = null;
 let sessionToken = null;
 // correction state
@@ -62,7 +62,7 @@ function updateProgressUI() {
 
     if (progressFill && progressText) {
         const current = questionsAnswered + 1;
-        progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+        progressText.textContent = `Q${current}`;
         const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
         progressFill.style.width = pct + '%';
     }
@@ -121,7 +121,7 @@ async function loadQuestion() {
         const progressFill = document.getElementById('progress-fill');
         if (progressText && progressFill) {
             const current = questionsAnswered + 1;
-            progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+            progressText.textContent = `Q${current}`;
             const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
             progressFill.style.width = pct + '%';
         }
@@ -240,6 +240,7 @@ function handleTime () {
     }
 }
 
+
 async function submitAnswer() {
     if (isSubmitting) {
         console.log('Submit already in progress, ignoring');
@@ -307,12 +308,18 @@ async function submitAnswer() {
         
         await syncProgress();
 
-        if (questionsAnswered == 2) {
+        if (questionsAnswered >= 1) {
             const statBtn = document.createElement('button');
             statBtn.id = 'unblock-stats-btn';
             statBtn.textContent = 'VIEW PROGRESS ->';
             statBtn.className = 'export-btn';
-            statBtn.onclick = function() { location.href = 'stats.html';};
+            statBtn.onclick = async function() {
+                await fetch('/session/end', {
+                    method: 'POST',
+                    headers: {'Authorisation': 'Bearer ' + sessionToken}
+                });
+                location.href = 'stats.html';
+            };
             document.querySelector('.footer').appendChild(statBtn);
         }
         

@@ -74,6 +74,14 @@ body {
     text-shadow: 3px 3px 0 #ddd;
     line-height: 1.2;
     margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+#stat-best-role {
+    font-size: clamp(0.8rem, 2.5vw, 1.3rem);
 }
 
 .stat-card label {

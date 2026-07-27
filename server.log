@@ -105,3 +105,74 @@ unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
 127.0.0.1 - - [27/Jul/2026 19:33:29] "POST /session/submit HTTP/1.1" 200 -
 127.0.0.1 - - [27/Jul/2026 19:33:29] "GET /stats/unlock-status HTTP/1.1" 200 -
 127.0.0.1 - - [27/Jul/2026 19:33:47] "POST /correct HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:36:43] "POST /session/submit HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:36:43] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:36:53] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:07] "POST /session/submit HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:07] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "[36mGET /questions.html?role=Software%20Engineer HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "[36mGET /questions.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "[36mGET /questions.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "POST /session/start HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "[36mGET /questions.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:37:38] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:48] "POST /session/submit HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:48] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:50] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:58] "POST /session/submit HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:37:58] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:38:01] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:38:40] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "[36mGET /questions.html?role=Software%20Engineer HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "[36mGET /questions.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "GET /questions.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "POST /session/start HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:44] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:54] "POST /session/submit HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:40:54] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "[36mGET /stats.html HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "[36mGET /stats.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "[36mGET /stats.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "GET /stats/unlock-status HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "GET /stats/summary HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:42:15] "GET /stats/chart-data HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 19:42:22] "POST /session/submit HTTP/1.1" 200 -
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+127.0.0.1 - - [27/Jul/2026 20:18:51] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 20:24:11] "POST /auth/signup HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 20:24:23] "POST /session/start HTTP/1.1" 200 -
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+127.0.0.1 - - [27/Jul/2026 20:24:39] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 20:25:01] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 20:25:33] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 20:25:40] "[31m[1mPOST /session/start HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 20:26:03] "[31m[1mPOST /auth/login HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 20:26:12] "POST /auth/signup HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 20:26:38] "POST /session/start HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 20:26:42] "GET /session/question HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 20:27:10] "POST /session/submit HTTP/1.1" 200 -
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/app.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286

@@ -477,9 +477,9 @@ def stats_unlock():
     data = _user_scores.get(user_id, {})
     answered = len(data.get('points', []))
     return jsonify ({
-        'unlocked': answered >= 5,
+        'unlocked': answered >= 1,
         'answered': answered,
-        'required': 5
+        'required': 1,
     })
 
 
