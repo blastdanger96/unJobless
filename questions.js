@@ -1,12 +1,13 @@
 // these 3 lives at module scope (not inside a function) so every function below can read and update them across the whole session
 let role = null;
 let score = 0;
-let questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
+let questionsAnswered = 0;
 let timeRemaining = 90;
 let timerInterval = null;
 const timer_sec = 90;
 let timerHidden = false;
 const SESSION_LENGTH = 5;
+const UNLOCK_THRESHOLD = 2;
 let authToken = null;
 let sessionToken = null;
 // correction state
@@ -20,15 +21,27 @@ async function init() {
     authToken = localStorage.getItem('auth_token');
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
-    questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
+    await syncProgress();
     const progressText = document.getElementById('progress-text');
     const progressFill = document.getElementById('progress-fill');
+    function updateProgressUI() {
+        const progressText = document.getElementById('progress-text');
+        const progressFill = document.getElementById('progress-fill');
+        const qCounter = document.getElementById('q-counter');
+        const qCounterFooter = document.getElementById('q-count');
+
+    }
     if (progressFill && progressText) {
         const current = questionsAnswered + 1;
         progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
-        const pct = Math.min((current / SESSION_LENGTH) * 100);
+        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
         progressFill.style.width = pct + '%';
     }
+    if (qCounter) qCounter.textContent = 'Q' + (questionsAnswered + 1);
+    if (qCounterFooter) qCounterFooter.textContent = questionsAnswered;
+    
+    await startSession();
+    await loadQuestion();
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -36,7 +49,7 @@ async function init() {
             if (!isSubmitting) {
                 submitAnswer();
             }
-            
+
         }
     });
 
@@ -129,6 +142,24 @@ async function loadQuestion() {
             'Failed to load question. <button onclick="loadQuestion()">Retry</button>';
     } 
 }
+
+async function syncProgress() {
+    try {
+        const res = await fetch('/stats/unlock-status', {
+            headers: {'Authorisation': 'Bearer' + authToken}
+        });
+        if (res.ok) {
+            const data = await res.json();
+            questionsAnswered = data.answered || 0;
+            updateProgressUI();
+        }
+    } catch (e) {
+        console.warn('couldn\'t sync progress:', e);
+        questionsAnswered = 0;
+    }
+    
+}
+
 
 async function startTimer() {
     if (timerHidden) return;
@@ -276,11 +307,9 @@ async function submitAnswer() {
         feedbackText.textContent = data.feedback;
         breakdownText.textContent = data.breakdown;
         
-        score += data.points;
-        questionsAnswered += 1;
-        localStorage.setItem('q_answered', questionsAnswered);
+        await syncProgress();
 
-        if (questionsAnswered == 5) {
+        if (questionsAnswered == 2) {
             const statBtn = document.createElement('button');
             statBtn.id = 'unblock-stats-btn';
             statBtn.textContent = 'VIEW PROGRESS ->';
@@ -359,7 +388,7 @@ async function improveAnswer() {
     if (answer.length < 20) {
         alert('write more first dawg');
         return;
-    } 
+    }
 
     const btn = document.getElementById('improve-btn');
     btn.disabled = true;
