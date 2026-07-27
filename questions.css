@@ -523,20 +523,19 @@ textarea:focus {border-color: #2b7c2f;}
     color: #fff;
 }
 
-#timer-box.timer-hidden #timer-display, #timer-box.timer-hidden.timer-track{
+#timer-box.timer-hidden #timer-display,
+#timer-box.timer-hidden .timer-track {
     display: none;
 }
 
-
-#timer-box.timer-hidden.hide-timer-btn{
-    border: #2b7c2f;
+#timer-box.timer-hidden .hide-timer-btn {
+    border-color: #2b7c2f;
     color: #2b7c2f;
 }
 
-#timer-box.timer-hidden.hide-timer-btn:hover {
+#timer-box.timer-hidden .hide-timer-btn:hover {
     background: #2b7c2f;
     color: #fff;
-
 }
 
 #unblock-stats-btn {
@@ -552,6 +551,24 @@ textarea:focus {border-color: #2b7c2f;}
     margin-top: -10px;
     transition: background 0.08s, color 0.08s, transform 0.05s;
     white-space: nowrap;
+}
+
+.retry-btn {
+    border: 3px solid #c00;
+    background: #fff;
+    color: #c00;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.45rem;
+    padding: 10px 16px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    margin-top: 12px;
+    transition: background 0.08s, color 0.08s, border-color 0.08s;
+}
+
+.retry-btn:hover {
+    background: #c00;
+    color: #fff;
 }
 
 #unblock-stats-btn:hover {

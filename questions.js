@@ -92,6 +92,10 @@ async function startSession() {
         },
         body: JSON.stringify({role})
     });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Session start failed (${res.status})`);
+    }
     const data = await res.json();
     sessionToken = data.session_token;
 }
@@ -133,11 +137,11 @@ async function loadQuestion() {
             badge.className = data.difficulty;
         }
 
-    } catch (err) {
+} catch (err) {
         console.error('Failed to load question:', err);
         document.getElementById('question-display').innerHTML = 
-            'Failed to load question. <button onclick="loadQuestion()">Retry</button>';
-    } 
+            'Failed to load question. <button class="retry-btn" onclick="loadQuestion()">Retry</button>';
+    }
 }
 
 async function syncProgress() {
@@ -178,7 +182,6 @@ async function startTimer() {
 
 function hideTimer() {
     timerHidden = true;
-    //u suck my di
     stopTimer();
     document.getElementById('timer-box').classList.add('timer-hidden');
     const btn = document.getElementById('hide-timer-btn');

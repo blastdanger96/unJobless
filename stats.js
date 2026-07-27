@@ -13,7 +13,7 @@ async function init() {
         document.getElementById('lock-required').textContent = d.required;
         document.getElementById('lock-required2').textContent = d.required;
         document.getElementById('lock-screen').classList.remove('hidden');
-        return;
+        return; 
     }
     document.getElementById('lock-screen').classList.add('hidden');
     document.getElementById('stats-content').classList.remove('hidden');
@@ -96,7 +96,7 @@ function buildCharts(d) {
             options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, title: { display: true, text: 'Average Score by Difficulty', font: { family: 'Press Start 2P', size: 16 }}}, scales: { y: { beginAtZero: true, max: 3, ticks: { stepSize: 1, font: { family: 'VT323', size: 12 }}}, x: { ticks: { font: { family: 'VT323', size: 12 }} } } }
         });
     }
-
+////
     if (d.distribution) {
         var ctx4 = document.getElementById('chart-distribution').getContext('2d');
         if (distChart) distChart.destroy();

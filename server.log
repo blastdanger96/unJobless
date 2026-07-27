@@ -176,3 +176,45 @@ unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
  * Restarting with stat
  * Debugger is active!
  * Debugger PIN: 525-650-286
+127.0.0.1 - - [27/Jul/2026 21:17:52] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 21:17:52] "[36mGET /style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 21:17:52] "[36mGET /script.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 21:17:52] "GET /roles HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 21:17:52] "[36mGET /style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "GET /questions.html?role=Consultant HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "[36mGET /questions.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "GET /questions.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "[31m[1mGET /stats/unlock-status HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "[31m[1mPOST /session/start HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 21:17:59] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 21:18:00] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 21:18:01] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 21:18:01] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+ * Detected change in '/Users/dhruvplegend100_az/Desktop/Projects/unJobless/ai_teacher.py', reloading
+unst.J0e_bless running on localhost:8000 | 4 roles | 75 questions fetched
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 525-650-286
+127.0.0.1 - - [27/Jul/2026 23:34:34] "[36mGET / HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:34] "[36mGET /style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:34] "[36mGET /script.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:34] "GET /roles HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 23:34:34] "[36mGET /style.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "[36mGET /questions.html?role=Software%20Engineer HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "GET /questions.css HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "GET /questions.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "[31m[1mGET /stats/unlock-status HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "[31m[1mPOST /session/start HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:43] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:44] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[36mGET /questions.html?role=Software%20Engineer HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[36mGET /questions.css HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[36mGET /questions.js HTTP/1.1[0m" 304 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[31m[1mGET /stats/unlock-status HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[31m[1mPOST /session/start HTTP/1.1[0m" 401 -
+127.0.0.1 - - [27/Jul/2026 23:34:59] "[31m[1mGET /session/question HTTP/1.1[0m" 401 -

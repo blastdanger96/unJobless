@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
-AI_MODEL = os.getenv("AI_MODEL", "claude-sonnet-4-5-20250929")
-AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "8"))
+AI_MODEL = os.getenv("AI_MODEL", "claude-3-5-sonnet-20241022")
+AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "30"))
 
 _failure_count = 0
 _circuit_open_until = 0
@@ -83,7 +83,10 @@ Candidate answer: {answer}"""
 
 def _get_claude_client():
     import anthropic
-    return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return anthropic.Anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        timeout=AI_TIMEOUT
+    )
 
 
 def _strip_markdown_fences(text: str) -> str:
