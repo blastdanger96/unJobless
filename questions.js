@@ -6,6 +6,7 @@ let timeRemaining = 90;
 let timerInterval = null;
 const timer_sec = 90;
 let timerHidden = false;
+const SESSION_LENGTH = 5;
 
 // correction state
 let currentImproved = '';
@@ -18,6 +19,15 @@ async function init() {
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
     questionsAnswered = parseInt(localStorage.getItem('q_answered')) || 0;
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
+    if (progressFill && progressText) {
+        const current = questionsAnswered + 1;
+    progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+    const pct = Math.min((current / Session_length) *100);
+    progressFill.style.width = pct + '%';
+
+    }
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -43,7 +53,6 @@ async function init() {
         el.textContent = count;
         el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
     });
-
     await loadQuestion();
 }
 
@@ -77,6 +86,15 @@ async function loadQuestion() {
         document.getElementById('question-display').innerHTML =
             '> ' + data.question + '<span class="cursor">_</span>';
         document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
+
+        const progressText = document.getElementById('progress-text');
+        const progressFill = document.getElementById('progress-fill');
+        if (progressText && progressFill) {
+            const current = questionsAnswered + 1;
+            progressText.textContent = `Q${current} / ${SESSION_LENGTH}`;
+            const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
+            progressFill.style.width = pct + '%';
+        }
         startTimer();
         const badge = document.getElementById('difficulty-lvl');
 
@@ -241,12 +259,12 @@ async function submitAnswer() {
         localStorage.setItem('q_answered', questionsAnswered);
 
         if (questionsAnswered == 5) {
-            var btn = document.createElement('button');
-            btn.id = 'unblock-stats-btn';
-            btn.textContent = 'VIEW PROGRESS ->';
-            btn.className = 'export-btn';
-            btn.onclick = function() { location.href = 'stats.html';};
-            document.querySelector('.footer').appendChild(btn);
+            const statBtn = document.createElement('button');
+            statBtn.id = 'unblock-stats-btn';
+            statBtn.textContent = 'VIEW PROGRESS ->';
+            statBtn.className = 'export-btn';
+            statBtn.onclick = function() { location.href = 'stats.html';};
+            document.querySelector('.footer').appendChild(statBtn);
 
         }
         
