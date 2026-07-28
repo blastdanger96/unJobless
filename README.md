@@ -1,6 +1,6 @@
 ### unJobless - AI Interview Practice
 
-unJobless is a light Flask-based AI grader for the most asked interview questions, made specifically to provide a All-in-One plateform for cringe Gen-z job seekers who want to actively learn and improve to score a decent job, in such a shitty job market.
+unJobless is a light Flask-based AI grader for the most asked interview questions, made specifically to provide a All-in-One plateform for cringe Gen-z job seekers who want to actively learn and improve to score a decent job, in such a shitty job market. Oh and they got a progress page to give you a pdf which tells how cooked you are now!
 
 ### Quick Start
 1. You can directly use the hosted website link from Vercel:- https://unjobless.vercel.app/index.html
@@ -47,8 +47,8 @@ I have used AI for:-
 1. When I started to code for unJobless, I was very much familiar with python but the course I had learnt it using didn't teach me anything about github, so I had to take AI's help as I was completely blank in the beginning to commit my code and learn how things work.
 
 2. Solving bugs in the code I was oblivious to and unable to crack many times, this includes entire page failures and function not being able to get called properly and utilized, to basic spelling errors and excessive relience on tutorial turning the code complicated.
-
-3. For a new language (I was completely new to json so I had to ask AI to give me the structure to write the questions in them for the question bank I made, used in rule based learning in python)
+   
+4. I have used AI as a base to get started with the stats.html page, and then add my own elements on top of this!
 
 I have specifically used Nemotron 3 Ultra 550B A55B model, NVIDA's latest model which gives you free tokens on opencode for this help and for committing I have also used VS-Code's own baked Copilot and it's been really useful. Taught me alot of stuff i'd be struggling for in minutes and I am super grateful.
 
