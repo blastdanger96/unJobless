@@ -17,8 +17,38 @@ let currentChanges = [];
 let isSubmitting = false;
 let submitAbortControl = null;
 
+async function fetchWithRetry(url, options, maxRetries = 4, baseDelay = 400) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+            if (res.status < 500) throw new Error(`HTTP ${res.status}`);
+        } catch (e) {
+            if (i === maxRetries - 1) throw e;
+        }
+        await new Promise(r => setTimeout(r, baseDelay * Math.pow(2, i) + Math.random() * 150));
+    }
+}
+
+async function initAuth() {
+    const existingToken = localStorage.getItem('auth_token');
+    if (existingToken) return existingToken;
+    const anonEmail = 'anon_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
+    const res = await fetch('/auth/signup', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: anonEmail, password: 'anon', role: ''})
+    });
+    if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('auth_token', data.token);
+        return data.token;
+    }
+    return null;
+}
+
 async function init() {
-    authToken = localStorage.getItem('auth_token');
+    authToken = await initAuth();
     const params = new URLSearchParams(window.location.search);
     role = params.get('role');
 
@@ -30,7 +60,7 @@ async function init() {
     await syncProgress();
     updateProgressUI();
 
-    await startSession();
+    await ensureSession();
     await loadQuestion();
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
@@ -83,64 +113,76 @@ window.addEventListener('beforeunload', () => {
     }
 });
 
-async function startSession() {
-    const res = await fetch('/session/start', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorisation': 'Bearer ' + authToken
-        },
-        body: JSON.stringify({role})
-    });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `Session start failed (${res.status})`);
+async function ensureSession() {
+    if (sessionToken) return;
+    try {
+        const res = await fetchWithRetry('/session/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorisation': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({role})
+        });
+        const data = await res.json();
+        sessionToken = data.session_token;
+    } catch (e) {
+        sessionToken = null;
     }
-    const data = await res.json();
-    sessionToken = data.session_token;
 }
 
 async function loadQuestion() {
-    if (!role) {
-        document.getElementById('question-display').innerHTML = 'Error: No role specified';
-        return;
-    }
+    if (!role) return;
 
     timerHidden = false;
     document.getElementById('timer-box').classList.remove('timer-hidden');
     document.getElementById('hide-timer-btn').textContent = 'HIDE TIMER';
     document.getElementById('hide-timer-btn').onclick = hideTimer;
 
-    try {
-        const res = await fetch('/session/question', {
-            headers: {'Authorisation': 'Bearer ' + sessionToken}
-        });
-        if (!res.ok) throw new Error(`Failed to load question (${res.status})`);
-        const data = await res.json();
-        document.getElementById('question-display').innerHTML =
-            '> ' + data.question + '<span class="cursor">_</span>';
-        document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
+    const display = document.getElementById('question-display');
+    display.innerHTML = 'LOADING....<span class="cursor">_</span>';
 
-        const progressText = document.getElementById('progress-text');
-        const progressFill = document.getElementById('progress-fill');
-        if (progressText && progressFill) {
-            const current = questionsAnswered + 1;
-            progressText.textContent = `Q${current}`;
-            const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
-            progressFill.style.width = pct + '%';
+    let data = null;
+
+    if (sessionToken) {
+        try {
+            const res = await fetchWithRetry('/session/question', {
+                headers: {'Authorisation': 'Bearer ' + sessionToken}
+            });
+            data = await res.json();
+        } catch (e) {
+            sessionToken = null;
         }
-        startTimer();
-        const badge = document.getElementById('difficulty-lvl');
+    }
 
-        if (badge && data.difficulty) {
-            badge.textContent = data.difficulty.toUpperCase();
-            badge.className = data.difficulty;
+    if (!data) {
+        try {
+            const res = await fetchWithRetry('/question?role=' + encodeURIComponent(role));
+            data = await res.json();
+        } catch (e) {
+            display.innerHTML = 'LOADING....<span class="cursor">_</span>';
+            setTimeout(loadQuestion, 800);
+            return;
         }
+    }
 
-} catch (err) {
-        console.error('Failed to load question:', err);
-        document.getElementById('question-display').innerHTML = 
-            'Failed to load question. <button class="retry-btn" onclick="loadQuestion()">Retry</button>';
+    display.innerHTML = '> ' + data.question + '<span class="cursor">_</span>';
+    document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
+
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
+    if (progressText && progressFill) {
+        const current = questionsAnswered + 1;
+        progressText.textContent = `Q${current}`;
+        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
+        progressFill.style.width = pct + '%';
+    }
+    startTimer();
+    const badge = document.getElementById('difficulty-lvl');
+
+    if (badge && data.difficulty) {
+        badge.textContent = data.difficulty.toUpperCase();
+        badge.className = data.difficulty;
     }
 }
 
@@ -155,7 +197,6 @@ async function syncProgress() {
             updateProgressUI();
         }
     } catch (e) {
-        console.warn('couldn\'t sync progress:', e);
         questionsAnswered = 0;
     }
     
@@ -283,73 +324,90 @@ async function submitAnswer() {
 
     feedbackBox.scrollIntoView({behavior: 'smooth'});
 
-    try {
-        const res = await fetch('/session/submit', {
-            method: 'POST',
-            headers: {
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            await ensureSession();
+            const endpoint = sessionToken ? '/session/submit' : '/submit';
+            const headers = {
                 'Content-Type': 'application/json',
-                'Authorisation': 'Bearer ' + sessionToken
-            },
-            body: JSON.stringify({answer}),
-            signal
-        });
-
-        if (signal.aborted) {
-            console.log('Submit aborted');
-            return;
-        }
-
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || `grading failed (${res.status})`);
-        }
-        const data = await res.json();
-
-        feedbackText.classList.remove('loading');
-        feedbackText.textContent = data.feedback;
-        breakdownText.textContent = data.breakdown;
-        
-        await syncProgress();
-
-        if (questionsAnswered >= 1) {
-            const statBtn = document.createElement('button');
-            statBtn.id = 'unblock-stats-btn';
-            statBtn.textContent = 'VIEW PROGRESS ->';
-            statBtn.className = 'export-btn';
-            statBtn.onclick = async function() {
-                await fetch('/session/end', {
-                    method: 'POST',
-                    headers: {'Authorisation': 'Bearer ' + sessionToken}
-                });
-                location.href = 'stats.html';
+                'Authorisation': 'Bearer ' + (sessionToken || authToken)
             };
-            document.querySelector('.footer').appendChild(statBtn);
-        }
-        
-        document.getElementById('score').textContent = score;
-        document.getElementById('q-count').textContent = questionsAnswered;
-        document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
+            const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
 
-        document.getElementById('next-btn').style.display = 'block';
-        document.getElementById('improve-btn').style.display = 'block';
+            const res = await fetchWithRetry(endpoint, {
+                method: 'POST',
+                headers,
+                body,
+                signal
+            });
 
-    } catch (err) { 
-        if (err.name === 'AbortError' || signal.aborted) {
-            console.log('Submit aborted');
+            if (signal.aborted) {
+                console.log('Submit aborted');
+                return;
+            }
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `grading failed (${res.status})`);
+            }
+            const data = await res.json();
+
+            feedbackText.classList.remove('loading');
+            feedbackText.textContent = data.feedback;
+            breakdownText.textContent = data.breakdown;
+            
+            await syncProgress();
+
+            if (questionsAnswered >= 1) {
+                const statBtn = document.createElement('button');
+                statBtn.id = 'unblock-stats-btn';
+                statBtn.textContent = 'VIEW PROGRESS ->';
+                statBtn.className = 'export-btn';
+                statBtn.onclick = async function() {
+                    if (sessionToken) {
+                        await fetch('/session/end', {
+                            method: 'POST',
+                            headers: {'Authorisation': 'Bearer ' + sessionToken}
+                        });
+                    }
+                    location.href = 'stats.html';
+                };
+                document.querySelector('.footer').appendChild(statBtn);
+            }
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('q-count').textContent = questionsAnswered;
+            document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
+
+            document.getElementById('next-btn').style.display = 'block';
+            document.getElementById('improve-btn').style.display = 'block';
             return;
-        }
-        console.error('Submit failed:', err);
-        feedbackText.textContent = 'Failed to submit answer. Please try again.';
 
-    } finally {
-        if (!signal.aborted) {
+        } catch (err) {
+            lastErr = err;
+            if (err.name === 'AbortError' || signal.aborted) {
+                console.log('Submit aborted');
+                return;
+            }
+            if (err.message?.includes('401') || err.message?.includes('403')) {
+                sessionToken = null;
+            }
+            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+    }
+
+    console.error('Submit failed after retries:', lastErr);
+    feedbackText.classList.remove('loading');
+    feedbackText.textContent = 'Something went wrong. Your answer was saved locally.';
+
+    if (!signal.aborted) {
         btn.disabled = false;
         btn.textContent = 'SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS';
-        }
-
-        isSubmitting = false;
-        submitAbortControl = null;
     }
+
+    isSubmitting = false;
+    submitAbortControl = null;
 }
 
 async function nextQuestion() {
@@ -383,7 +441,7 @@ async function skipQuestion() {
 
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
-    loadQuestion();
+    await loadQuestion();
 }
 
 async function improveAnswer() {
@@ -402,33 +460,48 @@ async function improveAnswer() {
     btn.disabled = true;
     btn.textContent = '...improving...';
 
-    try {
-        const res = await fetch('/correct', {
-            method: 'POST',
-            headers: {
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            await ensureSession();
+            const endpoint = sessionToken ? '/correct' : '/correct';
+            const headers = {
                 'Content-Type': 'application/json',
-                'Authorisation': 'Bearer ' + sessionToken
-            },
-            body: JSON.stringify({answer})
-        });
+                'Authorisation': 'Bearer ' + (sessionToken || authToken)
+            };
+            const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
 
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(errData.error || `improvement failed (${res.status})`);
+            const res = await fetchWithRetry(endpoint, {
+                method: 'POST',
+                headers,
+                body
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || `improvement failed (${res.status})`);
+            }
+            const data = await res.json();
+
+            currentImproved = data.improved;
+            currentChanges = data.changes;
+            showCorrection(data.explanation, data.changes);
+            return;
+
+        } catch (err) {
+            lastErr = err;
+            if (err.message?.includes('401') || err.message?.includes('403')) {
+                sessionToken = null;
+            }
+            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
         }
-        const data = await res.json();
-
-        currentImproved = data.improved;
-        currentChanges = data.changes;
-        showCorrection(data.explanation, data.changes);
-
-    } catch (err) {
-        console.error('AI correction failed:', err);
-        alert(err.message || 'AI correction failed');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'AI IMPROVE MY ANSWER';
     }
+
+    console.error('AI correction failed after retries:', lastErr);
+    alert('AI correction unavailable right now.');
+
+    btn.disabled = false;
+    btn.textContent = 'AI IMPROVE MY ANSWER';
 }
 
 function showCorrection(explanation, changes) {
