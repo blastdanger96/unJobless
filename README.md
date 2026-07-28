@@ -1,16 +1,17 @@
 ### unJobless - AI Interview Practice
 
-unJobless is a light Flask-based AI grader for the most asked interview questions, made specifically to provide a All-in-One plateform for cringe Gen-z job seekers who want to actively learn and improve to score a decent job, in such a shitty job market. Oh and they got a progress page to give you a pdf which tells how cooked you are now!
+unJobless is a light Flask-based AI grader for the most asked interview questions, made specifically to provide a All-in-One plateform for cringe Gen-z job seekers who want to actively learn and improve to score a decent job, in such a shitty job market. Oh and they got a progress page to give you a pdf now! Get better insights with graphs and pie charts (we all know your cooked either way).
 
 ### Quick Start
-1. You can directly use the hosted website link from Vercel:- https://unjobless.vercel.app/index.html
+1. You can directly use the hosted website link from Render:- https://unjobless.onrender.com/
+   (switched from vercel to render)
 <img width="874" height="691" alt="Screenshot 2026-07-14 at 4 28 59 PM" src="https://github.com/user-attachments/assets/485dd8f1-0079-4b61-b8b8-54a9af95baac" />
 <img width="794" height="300" alt="Screenshot 2026-07-14 at 4 28 27 PM" src="https://github.com/user-attachments/assets/9f8ce48f-11bb-4ec1-990f-12238704edfb" />
 <img width="680" height="471" alt="Screenshot 2026-07-14 at 4 28 06 PM" src="https://github.com/user-attachments/assets/79939a5a-3d7b-44c1-ad64-0025e294dd88" />
 
 
 
-2. You can download the required code and dependencies yourself and run it localhost (MAKE SURE TO REMOVE COMMENTS FROM PYTHON app.py CODE)
+3. You can download the required code and dependencies yourself and run it localhost (MAKE SURE TO REMOVE COMMENTS FROM PYTHON app.py CODE)
 ```bash
 # Install dependencies
 pip install -r requirements.txt
