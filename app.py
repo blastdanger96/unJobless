@@ -60,6 +60,19 @@ def _get_user_id():
         return None
     return _verify_token(auth[7:])
 
+def _get_user_id_from_request():
+    """Get user_id from either session token or auth token."""
+    # First try session token
+    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        session = _sessions.get(token)
+        if session:
+            return session['user_id']
+        # Fall back to auth token
+        return _verify_token(token)
+    return None
+
 def _require_auth():
     user_id = _get_user_id()
     if not user_id:
@@ -250,7 +263,7 @@ def end_session():
     
     user_id = session['user_id']
     user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}, 'sessions': []})
-    user_record['sessions'].append({
+    user_record.setdefault('sessions', []).append({
         'role': session['role'],
         'completed_at': datetime.utcnow().isoformat(),
         'questions': session['questions']
@@ -327,10 +340,10 @@ def submit():
         question = session['questions'][-1]['question'] if session['questions'] else ''
         user_id = session['user_id']
     else:
-        # Legacy mode
+        # Legacy mode - get user_id from auth token if available
+        user_id = _get_user_id_from_request() or body.get('user_id', 'anonymous').strip() or 'anonymous'
         role = body.get('role', '').strip()
         question = _recent.get(role, '')
-        user_id = body.get('user_id', 'anonymous').strip() or 'anonymous'
 
     answer = body.get('answer', '').strip()
     if role not in QUESTIONS:

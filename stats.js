@@ -11,7 +11,6 @@ async function init() {
     if (!d.unlocked) {
         document.getElementById('lock-answered').textContent = d.answered;
         document.getElementById('lock-required').textContent = d.required;
-        document.getElementById('lock-required2').textContent = d.required;
         document.getElementById('lock-screen').classList.remove('hidden');
         return; 
     }
