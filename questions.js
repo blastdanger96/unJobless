@@ -16,6 +16,8 @@ let currentChanges = [];
 // submit state of submission
 let isSubmitting = false;
 let submitAbortControl = null;
+// legacy fallback retry counter
+let legacyRetries = 0;
 
 async function fetchWithRetry(url, options, maxRetries = 4, baseDelay = 400) {
     for (let i = 0; i < maxRetries; i++) {
@@ -31,37 +33,47 @@ async function fetchWithRetry(url, options, maxRetries = 4, baseDelay = 400) {
 }
 
 async function initAuth() {
-    const existingToken = localStorage.getItem('auth_token');
-    if (existingToken) return existingToken;
-    const anonEmail = 'anon_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
-    const res = await fetch('/auth/signup', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({email: anonEmail, password: 'anon', role: ''})
-    });
-    if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('auth_token', data.token);
-        return data.token;
+    try {
+        const existingToken = localStorage.getItem('auth_token');
+        if (existingToken) return existingToken;
+        const anonEmail = 'anon_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
+        const res = await fetch('/auth/signup', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: anonEmail, password: 'anon', role: ''})
+        });
+        if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('auth_token', data.token);
+            return data.token;
+        }
+        return null;
+    } catch {
+        return null;
     }
-    return null;
 }
 
 async function init() {
-    authToken = await initAuth();
-    const params = new URLSearchParams(window.location.search);
-    role = params.get('role');
+    try {
+        authToken = await initAuth();
+        const params = new URLSearchParams(window.location.search);
+        role = params.get('role');
 
-    if (!role) {
-        alert('Role not specified. Please provide a role in the URL query parameters.');
-        return;
+        if (!role) {
+            alert('Role not specified. Please provide a role in the URL query parameters.');
+            return;
+        }
+
+        await syncProgress();
+        updateProgressUI();
+
+        await ensureSession();
+        await loadQuestion();
+        }  catch (e) {
+            console.error('Init Failed', e);
+            await loadQuestion();
     }
 
-    await syncProgress();
-    updateProgressUI();
-
-    await ensureSession();
-    await loadQuestion();
 
     document.getElementById('user-answer').addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -135,11 +147,16 @@ async function loadQuestion() {
     if (!role) return;
 
     timerHidden = false;
-    document.getElementById('timer-box').classList.remove('timer-hidden');
-    document.getElementById('hide-timer-btn').textContent = 'HIDE TIMER';
-    document.getElementById('hide-timer-btn').onclick = hideTimer;
+    const timerBox = document.getElementById('timer-box');
+    const hideBtn = document.getElementById('hide-timer-btn');
+    if (timerBox) timerBox.classList.remove('timer-hidden');
+    if (hideBtn) {
+        hideBtn.textContent = 'HIDE TIMER';
+        hideBtn.onclick = hideTimer;
+    }
 
     const display = document.getElementById('question-display');
+    if (!display) return;
     display.innerHTML = 'LOADING....<span class="cursor">_</span>';
 
     let data = null;
@@ -159,7 +176,13 @@ async function loadQuestion() {
         try {
             const res = await fetchWithRetry('/question?role=' + encodeURIComponent(role));
             data = await res.json();
+            legacyRetries = 0;
         } catch (e) {
+            legacyRetries++;
+            if (legacyRetries >= 5) {
+                display.innerHTML = 'Unable to load question. <button class="retry-btn" onclick="loadQuestion()">Retry</button>';
+                return;
+            }
             display.innerHTML = 'LOADING....<span class="cursor">_</span>';
             setTimeout(loadQuestion, 800);
             return;
