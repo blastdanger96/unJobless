@@ -1,4 +1,4 @@
-// these 3 lives at module scope (not inside a function) so every function below can read and update them across the whole session
+// dont reset em ☢️ they contain important info for the website
 let role = null;
 let score = 0;
 let questionsAnswered = 0;
@@ -10,37 +10,40 @@ const SESSION_LENGTH = 5;
 const UNLOCK_THRESHOLD = 1;
 let authToken = null;
 let sessionToken = null;
-// correction state
+// AI correction stuff, its fun but expensive asf
 let currentImproved = '';
 let currentChanges = [];
-// submit state of submission
+// submit state
 let isSubmitting = false;
 let submitAbortControl = null;
 // legacy fallback retry counter
 let legacyRetries = 0;
 
-async function fetchWithRetry(url, options, maxRetries = 4, baseDelay = 400) {
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            const res = await fetch(url, options);
-            if (res.ok) return res;
-            if (res.status < 500) throw new Error(`HTTP ${res.status}`);
-        } catch (e) {
-            if (i === maxRetries - 1) throw e;
-        }
-        await new Promise(r => setTimeout(r, baseDelay * Math.pow(2, i) + Math.random() * 150));
+// if it's busted, just goon- i mean retry once again
+async function fetchAPI(url, options) {
+    try {
+        const res = await fetch(url, options);
+        if (res.ok) return res;
+        throw new Error(`Server said ${res.status}`);
+    } catch (e) {
+        console.warn('fetch failed, retrying once...', e.message);
+        await new Promise(r => setTimeout(r, 500));
+        const res2 = await fetch(url, options);
+        if (!res2.ok) throw new Error(`Still failing: ${res2.status}`);
+        return res2;
     }
 }
 
 async function initAuth() {
+    // get or create anonomous token
     try {
         const existingToken = localStorage.getItem('auth_token');
         if (existingToken) return existingToken;
-        const anonEmail = 'anon_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
+        const anonomousEmail = 'anonomous_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
         const res = await fetch('/auth/signup', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email: anonEmail, password: 'anon', role: ''})
+            body: JSON.stringify({email: anonomousEmail, password: 'anonomous', role: ''})
         });
         if (res.ok) {
             const data = await res.json();
@@ -60,9 +63,10 @@ async function init() {
         role = params.get('role');
 
         if (!role) {
-            alert('Role not specified. Please provide a role in the URL query parameters.');
+            alert('Role not given. Please provide a role in the URL query parameters.');
             return;
         }
+
 
         await syncProgress();
         updateProgressUI();
@@ -96,7 +100,9 @@ async function init() {
     });
 }
 
+
 function updateProgressUI() {
+    // stating constants
     const progressText = document.getElementById('progress-text');
     const progressFill = document.getElementById('progress-fill');
     const qCounter = document.getElementById('q-counter');
@@ -128,7 +134,7 @@ window.addEventListener('beforeunload', () => {
 async function ensureSession() {
     if (sessionToken) return;
     try {
-        const res = await fetchWithRetry('/session/start', {
+        const res = await fetchAPI('/session/start', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -142,6 +148,7 @@ async function ensureSession() {
         sessionToken = null;
     }
 }
+
 
 async function loadQuestion() {
     if (!role) return;
@@ -163,7 +170,7 @@ async function loadQuestion() {
 
     if (sessionToken) {
         try {
-            const res = await fetchWithRetry('/session/question', {
+            const res = await fetchAPI('/session/question', {
                 headers: {'Authorisation': 'Bearer ' + sessionToken}
             });
             data = await res.json();
@@ -174,7 +181,7 @@ async function loadQuestion() {
 
     if (!data) {
         try {
-            const res = await fetchWithRetry('/question?role=' + encodeURIComponent(role));
+            const res = await fetchAPI('/question?role=' + encodeURIComponent(role));
             data = await res.json();
             legacyRetries = 0;
         } catch (e) {
@@ -210,6 +217,7 @@ async function loadQuestion() {
 }
 
 async function syncProgress() {
+    // check how many questions user has answered in total
     try {
         const res = await fetch('/stats/unlock-status', {
             headers: {'Authorisation': 'Bearer ' + authToken}
@@ -284,6 +292,7 @@ function updateDisplay() {
     timerEl.classList.remove('warning','critical');
     timerFillEl.classList.remove('warning','critical');
 
+    
     if (timeRemaining <= 10) {
         timerEl.classList.add('critical');
         timerFillEl.classList.add('critical');
@@ -361,7 +370,8 @@ async function submitAnswer() {
             };
             const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
 
-            const res = await fetchWithRetry(endpoint, {
+
+            const res = await fetchAPI(endpoint, {
                 method: 'POST',
                 headers,
                 body,
@@ -429,7 +439,7 @@ async function submitAnswer() {
 
     if (!signal.aborted) {
         btn.disabled = false;
-        btn.textContent = 'SUBMIT ANSWER';  // Fixed: was "GOOD LUCK MAY THO PASS"
+        btn.textContent = 'SUBMIT ANSWER';  // Fixed, it wwas "GOOD LUCK MAY THO PASS"
     }
 
     isSubmitting = false;
@@ -479,12 +489,11 @@ async function skipQuestion() {
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
 
-    // Reset submit button state for new question
+    // Reset submit & improve button state for new question
     const btn = document.getElementById('submit-btn');
     btn.disabled = false;
     btn.textContent = 'SUBMIT ANSWER';
 
-    // Reset improve button state for new question
     const improveBtn = document.getElementById('improve-btn');
     improveBtn.disabled = false;
     improveBtn.textContent = 'AI IMPROVE MY ANSWER';
@@ -510,6 +519,7 @@ async function improveAnswer() {
     btn.textContent = '...improving...';
 
     let lastErr = null;
+    // AI correction is fun but expensive asf, so we retry a couple times ONLY
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
             await ensureSession();
@@ -520,7 +530,7 @@ async function improveAnswer() {
             };
             const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
 
-            const res = await fetchWithRetry(endpoint, {
+            const res = await fetchAPI(endpoint, {
                 method: 'POST',
                 headers,
                 body
