@@ -347,6 +347,9 @@ async function submitAnswer() {
 
     feedbackBox.scrollIntoView({behavior: 'smooth'});
 
+    // DEBUG: log what we're sending
+    console.log('Submitting answer:', answer.substring(0, 50));
+
     let lastErr = null;
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
@@ -426,7 +429,7 @@ async function submitAnswer() {
 
     if (!signal.aborted) {
         btn.disabled = false;
-        btn.textContent = 'SUBMIT YOUR ANSWER. GOOD LUCK. MAY THO PASS';
+        btn.textContent = 'SUBMIT ANSWER';  // Fixed: was "GOOD LUCK MAY THO PASS"
     }
 
     isSubmitting = false;
