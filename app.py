@@ -34,10 +34,10 @@ QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
 _users = {}
 _sessions = {}  # token -> {user_id, role, started_at, questions: []}
 
-def _hash_pw(pw: str) -> str:
+def _hash_pw(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
-def _make_token(user_id: str) -> str:
+def _make_token(user_id):
     payload = {
         "user_id": user_id,
         "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRY_HOURS),
@@ -45,7 +45,7 @@ def _make_token(user_id: str) -> str:
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
-def _verify_token(token: str):
+def _verify_token(token):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         return payload["user_id"]
@@ -61,7 +61,6 @@ def _get_user_id():
     return _verify_token(auth[7:])
 
 def _get_user_id_from_request():
-    """Get user_id from either session token or auth token."""
     # First try session token
     auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
     if auth.startswith("Bearer "):
@@ -73,10 +72,10 @@ def _get_user_id_from_request():
         return _verify_token(token)
     return None
 
-def _require_auth():
+def _check_user():
     user_id = _get_user_id()
     if not user_id:
-        return None, (jsonify({"error": "unauthorized"}), 401)
+        return None, (jsonify({"error": "not logged in, bro"}), 401)
     return user_id, None
 
 # Words/phrases that signal structured answers — scored separately from content
@@ -147,7 +146,7 @@ def login():
 
 @app.route('/auth/me', methods=['GET'])
 def me():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     user = _users.get(user_id, {})
@@ -157,7 +156,7 @@ def me():
 # --- Session endpoints ---
 @app.route('/session/start', methods=['POST'])
 def start_session():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
 
@@ -276,7 +275,7 @@ def end_session():
     })
 
 
-def get_difficulty(ideal_length: int) -> str:
+def get_difficulty(ideal_length):
     if ideal_length <= 85:
         return 'easy'
     elif ideal_length <= 100:
@@ -284,13 +283,11 @@ def get_difficulty(ideal_length: int) -> str:
     else:
         return 'hard'
 
-def _get_session(token: str):
-    """Get session by token, returns None if invalid."""
+def _get_session(token):
     return _sessions.get(token)
 
 
 def _get_session_from_request():
-    """Extract session from Authorization header."""
     auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
     if auth.startswith("Bearer "):
         token = auth[7:]
@@ -467,7 +464,7 @@ def leaderboard():
 @app.route('/history')
 def history():
     """Get user's interview history (requires auth)."""
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
 
@@ -484,7 +481,7 @@ def history():
 
 @app.route('/stats/unlock-status')
 def stats_unlock():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     data = _user_scores.get(user_id, {})
@@ -498,7 +495,7 @@ def stats_unlock():
 
 @app.route('/stats/summary')
 def stats_summary():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     data = _user_scores.get(user_id, {})
@@ -548,7 +545,7 @@ def _calc_streak(user_id):
 
 @app.route('/stats/chart-data')
 def stats_chart_data():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     data = _user_scores.get(user_id, {})
@@ -605,7 +602,7 @@ def stats_chart_data():
 
 @app.route('/stats/export/json')
 def stats_export_json():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     data = _user_scores.get(user_id, {})
@@ -619,7 +616,7 @@ def stats_export_json():
 
 @app.route('/stats/export/pdf')
 def stats_export_pdf():
-    user_id, err = _require_auth()
+    user_id, err = _check_user()
     if err:
         return err
     data = _user_scores.get(user_id, {})
@@ -678,20 +675,7 @@ def stats_export_pdf():
     )
 
 
-def score_ratio(hits, total, high, low):
-    if not total:
-        return 0
-    
-    ratio = len(hits) / total
-    if ratio >= high:
-        return 2
-    elif ratio >= low:
-        return 1
-    else:
-        return 0
-
-
-def grade(role: str, answer: str, question: str) -> tuple:
+def grade(role, answer, question):
     # Find question metadata to get keywords/concepts for this specific question
     meta = next(
         (q for q in QUESTIONS.get(role, []) if q['q'] == question),
@@ -705,31 +689,48 @@ def grade(role: str, answer: str, question: str) -> tuple:
     word_count = len(words)
     ideal_length = meta.get('ideal_length', 80)
 
-    # <--- Length score (0-2) --->
-    length_score = 0
+    # Length score (0-2)
     if word_count >= ideal_length:
         length_score = 2
     elif word_count >= ideal_length * 0.6:
         length_score = 1
+    else:
+        length_score = 0
 
-    # <--- Keyword score (0-2) --->
+    # Keyword score (0-2) - half keywords = 2, 20% = 1
     keywords = meta.get('keywords', [])
     keyword_hits = [k for k in keywords if k.lower() in answer_lower]
-    keyword_score = score_ratio(keyword_hits, len(keywords), 0.5, 0.2)
+    if len(keyword_hits) >= len(keywords) * 0.5:
+        keyword_score = 2
+    elif len(keyword_hits) >= len(keywords) * 0.2:
+        keyword_score = 1
+    else:
+        keyword_score = 0
 
-    # <--- Concept score (0-2) --->
+    # Concept score (0-2) - 40% = 2, 20% = 1
     concepts = meta.get('concepts', [])
     concept_hits = [c for c in concepts if c.lower() in answer_lower]
-    concept_score = score_ratio(concept_hits, len(concepts), 0.4, 0.2)
-    # <--- Structure score (0-2) --->
-    structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
-    structure_score = 2 if structure_hits >= 2 else (1 if structure_hits == 1 else 0)
+    if len(concept_hits) >= len(concepts) * 0.4:
+        concept_score = 2
+    elif len(concept_hits) >= len(concepts) * 0.2:
+        concept_score = 1
+    else:
+        concept_score = 0
 
-    # <--- Example score (0-2) --->
+    # Structure score (0-2)
+    structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
+    if structure_hits >= 2:
+        structure_score = 2
+    elif structure_hits == 1:
+        structure_score = 1
+    else:
+        structure_score = 0
+
+    # Example score (0-2)
     has_example = any(m in answer_lower for m in EXAMPLE_MARKERS)
     example_score = 2 if has_example else 0
 
-    # Weighted composite: keywords/concepts matters 50%, length matters 30%, structure/examples matters 20% 
+    # Weighted composite: keywords/concepts 50%, length 30%, structure/examples 20%
     raw = (
         length_score * 0.2 +
         keyword_score * 0.3 +
@@ -748,31 +749,9 @@ def grade(role: str, answer: str, question: str) -> tuple:
     else:
         points = 0
 
-    feedback = build_feedback(
-        points, word_count, ideal_length,
-        keyword_hits, keywords,
-        concept_hits, concepts,
-        has_example
-    )
-
-    breakdown = build_breakdown(
-        keyword_hits, keywords,
-        concept_hits, concepts,
-        has_example, word_count, ideal_length,
-        structure_hits
-    )
-
-    return feedback, points, breakdown
-
-
-def build_feedback(points, word_count, ideal_length,
-                    keyword_hits, keywords,
-                    concept_hits, concepts,
-                    has_example) -> str:
+    # Build feedback inline
     lines = []
-
     if points == 3:
-        #lines.append("Well done smartass, you sound like you know your shi and you got the examples to back it up, gg gng")
         lines.append("Very well done, you have scored full marks for this question because of your enhanced ability to solve application-based questions, usually asked in interviews.")
         if keyword_hits:
             lines.append(f"u have also elaborated on various key terms correctly such as: {', '.join(keyword_hits)}.")
@@ -805,46 +784,44 @@ def build_feedback(points, word_count, ideal_length,
         if keywords:
             lines.append(f"use terms like this (for reference):- {', '.join(keywords[:4])}.")
 
-    return " ".join(lines)
+    feedback = " ".join(lines)
 
-
-def build_breakdown(keyword_hits, keywords,
-                     concept_hits, concepts,
-                     has_example, word_count, ideal_length,
-                     structure_hits) -> str:
-    lines = []
-
+    # Build breakdown inline
+    breakdown_lines = []
     if keywords and len(keyword_hits) >= len(keywords) * 0.5:
-        lines.append(f"+ used key technical terms like ({', '.join(keyword_hits[:3])})")
+        breakdown_lines.append(f"+ used key technical terms like ({', '.join(keyword_hits[:3])})")
     elif keyword_hits:
-        lines.append(f"~ some technical terms present but need more emphasis ({', '.join(keyword_hits[:2])})")
+        breakdown_lines.append(f"~ some technical terms present but need more emphasis ({', '.join(keyword_hits[:2])})")
     else:
-        lines.append("- missing key technical terminology")
+        breakdown_lines.append("- missing key technical terminology")
 
     if concepts and len(concept_hits) >= len(concepts) * 0.4:
-        lines.append("+ gg gng ur pretty good on the core concepts")
+        breakdown_lines.append("+ gg gng ur pretty good on the core concepts")
     elif concept_hits:
-        lines.append("~ core concepts touched on but u need to yap on more")
+        breakdown_lines.append("~ core concepts touched on but u need to yap on more")
     else:
-        lines.append(f"- ye bru u gotta yap more ({word_count} vs ~{ideal_length} ideal) or else u finna be cooked ash icl")
+        breakdown_lines.append(f"- ye bru u gotta yap more ({word_count} vs ~{ideal_length} ideal) or else u finna be cooked ash icl")
 
     if has_example:
-        lines.append("+ included an example, good job dawg")
+        breakdown_lines.append("+ included an example, good job dawg")
     elif word_count < ideal_length * 0.6:
-        lines.append("- answer is too short AND missing an example, add one to make it convincing")
+        breakdown_lines.append("- answer is too short AND missing an example, add one to make it convincing")
     else:
-        lines.append("- touch grass and put in a real example")
+        breakdown_lines.append("- touch grass and put in a real example")
 
     if structure_hits >= 2:
-        lines.append("+ g00d structure markers (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
+        breakdown_lines.append("+ g00d structure markers (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
     else:
-        lines.append("- yea bru u need to start lockin in on structure, ts aint tuff icl")
+        breakdown_lines.append("- yea bru u need to start lockin in on structure, ts aint tuff icl")
 
-    return '\n'.join(lines)
+    breakdown = '\n'.join(breakdown_lines)
+
+    # print(f"Debug: word_count={word_count}, raw={raw}, points={points}")  # uncomment if needed
+    return feedback, points, breakdown
 
 
-def basic_grade(answer: str) -> tuple:
-    #Fallback grading when no question metadata exists. Scores on length + example presence only. (can use """ for comments too but keep it simple)
+def basic_grade(answer):
+    # fallback grading when no question metadata exists - scores on length + example only
     has_example = any(m in answer.lower() for m in EXAMPLE_MARKERS)
     words = len(answer.split())
 

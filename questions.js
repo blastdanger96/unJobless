@@ -449,6 +449,17 @@ async function nextQuestion() {
 
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
+
+    // Reset submit button state for new question
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT ANSWER';
+
+    const improveBtn = document.getElementById('improve-btn');
+    improveBtn.disabled = false;
+    improveBtn.textContent = 'AI IMPROVE MY ANSWER';
+    improveBtn.classList.add('hidden');
+
     await loadQuestion();
 }
 
@@ -467,6 +478,18 @@ async function skipQuestion() {
 
     const feedbackBox = document.getElementById('feedback-box');
     feedbackBox.classList.add('hidden');
+
+    // Reset submit button state for new question
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT ANSWER';
+
+    // Reset improve button state for new question
+    const improveBtn = document.getElementById('improve-btn');
+    improveBtn.disabled = false;
+    improveBtn.textContent = 'AI IMPROVE MY ANSWER';
+    improveBtn.classList.add('hidden');
+
     await loadQuestion();
 }
 
@@ -567,4 +590,9 @@ function closeCorrection() {
     document.getElementById('correction-modal').classList.add('hidden');
     currentImproved = '';
     currentChanges = [];
+
+    // Reset submit button state
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT ANSWER';
 }
