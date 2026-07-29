@@ -85,7 +85,7 @@ async function init() {
     });
 
     document.getElementById('role-title').textContent = role.toUpperCase();
-    document.getElementById('role-subtitle').textContent = '//' + role + 'Interview //';
+    document.getElementById('role-subtitle').textContent = '// ' + role + ' Interview //';
 
     document.getElementById('user-answer').addEventListener('input', () => {
         const text = document.getElementById('user-answer').value.trim();
