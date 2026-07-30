@@ -483,10 +483,19 @@ def history():
 def stats_unlock():
     user_id, err = _check_user()
     if err:
+        # Try session token as fallback
+        auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+            session = _sessions.get(token)
+            if session:
+                user_id = session['user_id']
+                err = None
+    if err:
         return err
     data = _user_scores.get(user_id, {})
     answered = len(data.get('points', []))
-    return jsonify ({
+    return jsonify({
         'unlocked': answered >= 1,
         'answered': answered,
         'required': 1,

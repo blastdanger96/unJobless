@@ -2,7 +2,6 @@ import os
 import json
 import time
 import logging
-from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,43 +10,17 @@ AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
 AI_MODEL = os.getenv("AI_MODEL", "claude-3-5-sonnet-20241022")
 AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "30"))
 
-_failure_count = 0
-_circuit_open_until = 0
-CIRCUIT_THRESHOLD = 5
-CIRCUIT_COOLDOWN_SECONDS = 60
+# simple circuit breaker so that if API fails 5 times, wait 60s
+fail_count = 0
+circuit_open_until = 0
+THRESHOLD = 5
+COOLDOWN = 60
 
 logger = logging.getLogger(__name__)
 
 
-def _check_circuit() -> bool:
-    global _circuit_open_until
-    if _circuit_open_until > time.time():
-        return False
-    if _failure_count >= CIRCUIT_THRESHOLD:
-        _circuit_open_until = time.time() + CIRCUIT_COOLDOWN_SECONDS
-        return False
-    return True
-
-
-def _record_success():
-    global _failure_count, _circuit_open_until
-    _failure_count = 0
-    _circuit_open_until = 0
-
-
-def _record_failure():
-    global _failure_count
-    if _circuit_open_until <= time.time():
-        _failure_count += 1
-
-
-def _load_system_prompt() -> str:
-    version = os.getenv("PROMPT_VERSION", "v1.0")
-    path = f"prompts/{version}_system.txt"
-    if os.path.exists(path):
-        with open(path) as f:
-            return f.read()
-    return """You are an expert technical interviewer grading candidate answers.
+# just keeping the prompt here
+SYSTEM_PROMPT = """You are an expert technical interviewer grading candidate answers.
 Score 0-3 based on: accuracy, depth, structure, examples, communication.
 Return ONLY valid JSON: {"feedback": "string", "points": 0-3, "breakdown": "string"}
 
@@ -61,10 +34,7 @@ FEEDBACK STYLE: Direct, constructive, interviewer tone. Mention specific strengt
 BREAKDOWN: Bullet points of what was covered vs missed."""
 
 
-SYSTEM_PROMPT = _load_system_prompt()
-
-
-def _build_prompt(role: str, question: str, answer: str, meta: dict) -> str:
+def _mk_prompt(role, question, answer, meta):
     keywords = meta.get("keywords", [])
     concepts = meta.get("concepts", [])
     mistakes = meta.get("common_mistakes", [])
@@ -89,7 +59,7 @@ def _get_claude_client():
     )
 
 
-def _strip_markdown_fences(text: str) -> str:
+def _clean_json(text):
     text = text.strip()
     if text.startswith("```"):
         lines = text.splitlines()
@@ -98,14 +68,14 @@ def _strip_markdown_fences(text: str) -> str:
     return text.strip()
 
 
-def _extract_text_from_response(resp) -> str:
+def _get_text(resp):
     for block in resp.content:
         if hasattr(block, "text") and block.text:
-            return _strip_markdown_fences(block.text)
+            return _clean_json(block.text)
     return ""
 
 
-def _rule_based_grade(role: str, question: str, answer: str, meta: dict) -> dict:
+def _fallback_grade(role, question, answer, meta):
     from app import grade as rule_grade
     feedback, points, breakdown = rule_grade(role, answer, question)
     return {
@@ -116,20 +86,26 @@ def _rule_based_grade(role: str, question: str, answer: str, meta: dict) -> dict
     }
 
 
-def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict]:
+def ai_grade(role, question, answer, meta):
+    global fail_count, circuit_open_until
     start_time = time.time()
 
     if not AI_ENABLED:
-        return _rule_based_grade(role, question, answer, meta)
+        return _fallback_grade(role, question, answer, meta)
     if not os.getenv("ANTHROPIC_API_KEY"):
-        return _rule_based_grade(role, question, answer, meta)
+        return _fallback_grade(role, question, answer, meta)
 
-    if not _check_circuit():
+    # if API keeps failing, just use fallback - no need to burn money
+    if circuit_open_until > time.time():
         logger.warning("Circuit breaker open, falling back")
-        return _rule_based_grade(role, question, answer, meta)
+        return _fallback_grade(role, question, answer, meta)
+    if fail_count >= THRESHOLD:
+        circuit_open_until = time.time() + COOLDOWN
+        logger.warning("Too many failures, circuit open for %ds", COOLDOWN)
+        return _fallback_grade(role, question, answer, meta)
 
     try:
-        prompt = _build_prompt(role, question, answer, meta)
+        prompt = _mk_prompt(role, question, answer, meta)
         client = _get_claude_client()
 
         resp = client.messages.create(
@@ -142,7 +118,7 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
 
         latency_ms = int((time.time() - start_time) * 1000)
 
-        content = _extract_text_from_response(resp)
+        content = _get_text(resp)
         result = json.loads(content)
 
         if not all(k in result for k in ("feedback", "points", "breakdown")):
@@ -150,7 +126,8 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
         if not isinstance(result["points"], int) or not 0 <= result["points"] <= 3:
             return None
 
-        _record_success()
+        fail_count = 0
+        circuit_open_until = 0
 
         result["_meta"] = {
             "tokens_in": resp.usage.input_tokens,
@@ -169,12 +146,12 @@ def ai_grade(role: str, question: str, answer: str, meta: dict) -> Optional[dict
     except Exception as e:
         latency_ms = int((time.time() - start_time) * 1000)
         logger.error(f"AI grading failed: {e} (latency={latency_ms}ms)")
-        _record_failure()
+        fail_count += 1
         error_str = str(e).lower()
         if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
             logger.warning("Quota exceeded, falling back to rule-based grading")
-            return _rule_based_grade(role, question, answer, meta)
-        return _rule_based_grade(role, question, answer, meta)
+            return _fallback_grade(role, question, answer, meta)
+        return _fallback_grade(role, question, answer, meta)
 
 
 CORRECT_SYSTEM_PROMPT = """You are an expert technical interviewer improving candidate answers.
@@ -198,7 +175,7 @@ RULES:
 - changes array should have 3-8 items max"""
 
 
-def _build_correct_prompt(role: str, question: str, answer: str, meta: dict, feedback: str) -> str:
+def _mk_correct_prompt(role, question, answer, meta, feedback):
     keywords = meta.get("keywords", [])
     concepts = meta.get("concepts", [])
     mistakes = meta.get("common_mistakes", [])
@@ -216,7 +193,7 @@ Current feedback: {feedback}"""
     )
 
 
-def _rule_based_correct(role: str, question: str, answer: str, meta: dict, feedback: str) -> dict:
+def _fallback_correct(role, question, answer, meta, feedback):
     improved = answer.strip()
     changes = []
 
@@ -252,20 +229,25 @@ def _rule_based_correct(role: str, question: str, answer: str, meta: dict, feedb
     }
 
 
-def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str) -> Optional[dict]:
+def ai_correct(role, question, answer, meta, feedback):
+    global fail_count, circuit_open_until
     start_time = time.time()
 
     if not AI_ENABLED:
-        return _rule_based_correct(role, question, answer, meta, feedback)
+        return _fallback_correct(role, question, answer, meta, feedback)
     if not os.getenv("ANTHROPIC_API_KEY"):
-        return _rule_based_correct(role, question, answer, meta, feedback)
+        return _fallback_correct(role, question, answer, meta, feedback)
 
-    if not _check_circuit():
-        logger.warning("Circuit breaker open, falling back to rule-based correction")
-        return _rule_based_correct(role, question, answer, meta, feedback)
+    # circuit open for corrections too
+    if circuit_open_until > time.time():
+        logger.warning("Circuit breaker open for corrections, falling back")
+        return _fallback_correct(role, question, answer, meta, feedback)
+    if fail_count >= THRESHOLD:
+        circuit_open_until = time.time() + COOLDOWN
+        return _fallback_correct(role, question, answer, meta, feedback)
 
     try:
-        prompt = _build_correct_prompt(role, question, answer, meta, feedback)
+        prompt = _mk_correct_prompt(role, question, answer, meta, feedback)
         client = _get_claude_client()
 
         resp = client.messages.create(
@@ -278,13 +260,14 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
 
         latency_ms = int((time.time() - start_time) * 1000)
 
-        content = _extract_text_from_response(resp)
+        content = _get_text(resp)
         result = json.loads(content)
 
         if not all(k in result for k in ("improved_answer", "changes", "key_improvements")):
             return None
 
-        _record_success()
+        fail_count = 0
+        circuit_open_until = 0
 
         result["_meta"] = {
             "tokens_in": resp.usage.input_tokens,
@@ -300,9 +283,9 @@ def ai_correct(role: str, question: str, answer: str, meta: dict, feedback: str)
     except Exception as e:
         latency_ms = int((time.time() - start_time) * 1000)
         logger.error(f"AI correction failed: {e} (latency={latency_ms}ms)")
-        _record_failure()
+        fail_count += 1
         error_str = str(e).lower()
         if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
             logger.warning("Quota exceeded, falling back to rule-based correction")
-            return _rule_based_correct(role, question, answer, meta, feedback)
-        return _rule_based_correct(role, question, answer, meta, feedback)
+            return _fallback_correct(role, question, answer, meta, feedback)
+        return _fallback_correct(role, question, answer, meta, feedback)
