@@ -394,22 +394,38 @@ async function submitAnswer() {
             breakdownText.textContent = data.breakdown;
             
             await syncProgress();
+            // Ensure progress UI updates with latest count
+            updateProgressUI();
 
-            if (questionsAnswered >= 1) {
-                const statBtn = document.createElement('button');
-                statBtn.id = 'unblock-stats-btn';
-                statBtn.textContent = 'VIEW PROGRESS ->';
-                statBtn.className = 'export-btn';
-                statBtn.onclick = async function() {
-                    if (sessionToken) {
-                        await fetch('/session/end', {
-                            method: 'POST',
-                            headers: {'Authorisation': 'Bearer ' + sessionToken}
-                        });
+            // Debug: check if syncProgress actually updated the count
+            console.log('After syncProgress, questionsAnswered =', questionsAnswered);
+
+            // Fallback: if syncProgress failed or returned 0, but we just submitted so we know we answered at least 1
+            const totalAnswered = questionsAnswered || 1;
+            
+            if (totalAnswered >= 1) {
+                // Check if button already exists to avoid duplicates
+                if (!document.getElementById('unblock-stats-btn')) {
+                    const footer = document.querySelector('.footer');
+                    if (footer) {
+                        const statBtn = document.createElement('button');
+                        statBtn.id = 'unblock-stats-btn';
+                        statBtn.textContent = 'VIEW PROGRESS ->';
+                        statBtn.className = 'export-btn';
+                        statBtn.onclick = async function() {
+                            if (sessionToken) {
+                                await fetch('/session/end', {
+                                    method: 'POST',
+                                    headers: {'Authorisation': 'Bearer ' + sessionToken}
+                                });
+                            }
+                            location.href = 'stats.html';
+                        };
+                        footer.appendChild(statBtn);
+                    } else {
+                        console.warn('Footer not found, cannot append progress button');
                     }
-                    location.href = 'stats.html';
-                };
-                document.querySelector('.footer').appendChild(statBtn);
+                }
             }
             
             document.getElementById('score').textContent = score;
