@@ -214,7 +214,7 @@ def _fallback_correct(role, question, answer, meta, feedback):
         changes.append({"type": "replace", "original": improved[:6], "improved": "First, ", "reason": "Add structural transition"})
 
     if "example" in feedback.lower() and "example" not in improved.lower():
-        improved += " For example, consider a practical scenario demonstrating this concept."
+        improved += " For example, consider a practical scenario to showcase this concept."
         changes.append({"type": "add", "original": "", "improved": " For example, consider a practical scenario demonstrating this concept.", "reason": "Add concrete example as suggested by feedback"})
 
     if " i " in f" {improved.lower()} ":

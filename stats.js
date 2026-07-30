@@ -1,12 +1,17 @@
 var authToken = localStorage.getItem('auth_token');
+var sessionToken = localStorage.getItem('session_token');
 var timeSeriesChart = null, roleChart = null, diffChart = null, distChart = null;
 
 async function init() {
     authToken = localStorage.getItem('auth_token');
+    sessionToken = localStorage.getItem('session_token');
     if (!authToken) { location.href = 'index.html'; return; }
-    console.log('init stats', authToken?.slice(0, 10));
+    console.log('init stats', authToken?.slice(0, 10), sessionToken?.slice(0, 10));
 
-    var r = await fetch('/stats/unlock-status', { headers: { 'Authorisation': 'Bearer ' + authToken }});
+    var headers = { 'Authorisation': 'Bearer ' + authToken };
+    if (sessionToken) headers['X-Session-Token'] = sessionToken;
+
+    var r = await fetch('/stats/unlock-status', { headers: headers });
     var d = await r.json();
     if (!d.unlocked) {
         document.getElementById('lock-answered').textContent = d.answered;
@@ -17,7 +22,7 @@ async function init() {
     document.getElementById('lock-screen').classList.add('hidden');
     document.getElementById('stats-content').classList.remove('hidden');
 
-    fetch('/stats/summary', { headers: { 'Authorisation': 'Bearer ' + authToken }})
+    fetch('/stats/summary', { headers: headers })
         .then(function(r) { return r.json(); })
         .then(function(d) {
             document.getElementById('stat-total-qs').textContent = d.total_questions;
@@ -27,7 +32,7 @@ async function init() {
         })
         .catch(function() { alert('stat failed'); });
 
-    fetch('/stats/chart-data', { headers: { 'Authorisation': 'Bearer ' + authToken }})
+    fetch('/stats/chart-data', { headers: headers })
         .then(function(r) { return r.json(); })
         .then(function(d) { buildCharts(d); })
         .catch(function() {});
@@ -112,7 +117,9 @@ async function exportJSON() {
     var txt = btn.textContent;
     btn.disabled = true; btn.textContent = 'EXPORTING...';
     try {
-        var r = await fetch('/stats/export/json', { headers: { 'Authorisation': 'Bearer ' + authToken }});
+        var headers = { 'Authorisation': 'Bearer ' + authToken };
+        if (sessionToken) headers['X-Session-Token'] = sessionToken;
+        var r = await fetch('/stats/export/json', { headers: headers });
         if (r.status === 401) { localStorage.removeItem('auth_token'); location.href = 'index.html'; return; }
         var blob = await r.blob();
         var a = document.createElement('a');
@@ -128,7 +135,9 @@ function exportPDF() {
     var btn = document.getElementById('export-all-pdf');
     var txt = btn.textContent;
     btn.disabled = true; btn.textContent = 'GENERATING PDF...';
-    fetch('/stats/export/pdf', { headers: { 'Authorisation': 'Bearer ' + authToken }})
+    var headers = { 'Authorisation': 'Bearer ' + authToken };
+    if (sessionToken) headers['X-Session-Token'] = sessionToken;
+    fetch('/stats/export/pdf', { headers: headers })
         .then(function(r) {
             if (r.status === 401) { localStorage.removeItem('auth_token'); location.href = 'index.html'; throw 'auth'; }
             return r.blob();

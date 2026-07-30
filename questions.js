@@ -144,6 +144,7 @@ async function ensureSession() {
         });
         const data = await res.json();
         sessionToken = data.session_token;
+        localStorage.setItem('session_token', sessionToken); // store for stats page
     } catch (e) {
         sessionToken = null;
     }
@@ -219,12 +220,14 @@ async function loadQuestion() {
 async function syncProgress() {
     // check how many questions user has answered in total
     try {
-        const res = await fetch('/stats/unlock-status', {
-            headers: {'Authorisation': 'Bearer ' + authToken}
-        });
+        const headers = {'Authorisation': 'Bearer ' + authToken};
+        if (sessionToken) headers['X-Session-Token'] = sessionToken;
+        const res = await fetch('/stats/unlock-status', { headers });
         if (res.ok) {
             const data = await res.json();
             questionsAnswered = data.answered || 0;
+            // backup in localStorage for stats page fallback
+            localStorage.setItem('answered_count', questionsAnswered);
             updateProgressUI();
         }
     } catch (e) {

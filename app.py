@@ -482,19 +482,29 @@ def history():
 @app.route('/stats/unlock-status')
 def stats_unlock():
     user_id, err = _check_user()
+    auth_header = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
+    # Debug logging to track user_id resolution
+    print(f"DEBUG stats_unlock: auth_header_present={bool(auth_header)}, user_id={user_id}, err={err}")
+    
     if err:
-        # Try session token as fallback
-        auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
-        if auth.startswith("Bearer "):
-            token = auth[7:]
-            session = _sessions.get(token)
+        # Try session token from custom header (sent by stats.js)
+        session_token = request.headers.get("X-Session-Token")
+        if not session_token:
+            # Fallback: try Authorization header as session token
+            auth = auth_header
+            if auth.startswith("Bearer "):
+                session_token = auth[7:]
+        if session_token:
+            session = _sessions.get(session_token)
             if session:
                 user_id = session['user_id']
                 err = None
+                print(f"DEBUG stats_unlock: fallback to session, user_id={user_id}")
     if err:
         return err
     data = _user_scores.get(user_id, {})
     answered = len(data.get('points', []))
+    print(f"DEBUG stats_unlock: final user_id={user_id}, answered={answered}")
     return jsonify({
         'unlocked': answered >= 1,
         'answered': answered,
