@@ -112,6 +112,16 @@ async function init() {
     await syncProgress();
     await ensureSession();
     await loadQuestion();
+
+    // Ensure modal is hidden on new session start
+    const modal = $('correction-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('visible');
+        modal.style.display = 'none';
+    }
+    currentImproved = '';
+    currentChanges = [];
 }
 
 function updateWordCount() {
@@ -480,6 +490,12 @@ async function improveAnswer() {
 }
 
 function showCorrection(explanation, changes) {
+    const modal = $('correction-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('visible');
+    }
+
     $('correction-explanation').innerHTML =
         `<p class="correction-explanation">${escapeHtml(explanation)}</p>`;
 
@@ -497,7 +513,6 @@ function showCorrection(explanation, changes) {
     parts.push('</div>');
 
     $('correction-diff').innerHTML = parts.join('');
-    $('correction-modal').classList.remove('hidden');
 }
 
 function applyCorrection() {
@@ -508,7 +523,12 @@ function applyCorrection() {
 }
 
 function closeCorrection() {
-    $('correction-modal').classList.add('hidden');
+    const modal = $('correction-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('visible');
+        modal.style.display = 'none';
+    }
     currentImproved = '';
     currentChanges = [];
 }

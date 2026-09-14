@@ -22,9 +22,9 @@ from cost_tracker import get_cost_tracker
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.getenv("JWT_SECRET")
+SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY")
 if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET must be set in .env")
+    raise RuntimeError("JWT_SECRET must be set via .env or SECRET_KEY env var")
 TOKEN_EXPIRY_HOURS = 24 * 7  # a week
 
 app = Flask(__name__, static_folder='.')
