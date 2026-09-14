@@ -125,35 +125,22 @@ def _build_prompt(role, question, answer, meta, feedback=None):
 
 
 def _client():
-    import anthropic
-    return anthropic.Anthropic(
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
+    import openai
+    return openai.OpenAI(
+        api_key=os.getenv("NVIDIA_API_KEY"),
+        base_url="https://api.nvidia.com/v1",
         timeout=AI_TIMEOUT,
     )
 
 
-def _extract_json(resp):
-    """Pull the text out of the response and strip any ``` fencing."""
-    text = ""
-    for block in resp.content:
-        if getattr(block, "text", None):
-            text = block.text
-            break
 
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        # drop the fence lines, keep the middle
-        text = "\n".join(lines[1:-1]) if len(lines) >= 3 else text.strip("`")
-
-    return json.loads(text.strip())
 
 
 def _can_call():
     if not AI_ENABLED:
         return False
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        logger.debug("no ANTHROPIC_API_KEY set, staying on the rule grader")
+    if not os.getenv("NVIDIA_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"):
+        logger.debug("no AI API keys set, staying on the rule grader")
         return False
     if not breaker.allow():
         logger.warning("circuit is open, using fallback")
@@ -164,22 +151,69 @@ def _can_call():
     return True
 
 
+def _get_client():
+    """Return (client, api_type) tuple based on available API key."""
+    import anthropic
+    import openai
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    if nvidia_key:
+        client = openai.OpenAI(
+            api_key=nvidia_key,
+            base_url="https://api.nvidia.com/v1",
+            timeout=AI_TIMEOUT,
+        )
+        return client, "nvidia"
+    elif anthropic_key:
+        client = anthropic.Anthropic(
+            api_key=anthropic_key,
+            timeout=AI_TIMEOUT,
+        )
+        return client, "anthropic"
+    else:
+        return None, None
+
+
 def _invoke(system_prompt, user_prompt):
     """Single API call. Returns (parsed_json, meta_dict). Raises on failure."""
+    client, api_type = _get_client()
+    if not client:
+        raise RuntimeError("No AI client available")
+
     started = time.time()
-    resp = _client().messages.create(
-        model=AI_MODEL,
-        max_tokens=MAX_TOKENS,
-        temperature=TEMPERATURE,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
+
+    if api_type == "nvidia":
+        resp = client.chat.completions.create(
+            model=AI_MODEL,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        # NVIDIA response format
+        text = resp.choices[0].message.content
+        tokens_in = resp.usage.prompt_tokens
+        tokens_out = resp.usage.completion_tokens
+    else:
+        # anthropic
+        resp = client.messages.create(
+            model=AI_MODEL,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+        text = ""
+        for block in resp.content:
+            if getattr(block, "text", None):
+                text = block.text
+                break
+        tokens_in = resp.usage.input_tokens
+        tokens_out = resp.usage.output_tokens
+
     latency_ms = int((time.time() - started) * 1000)
 
-    result = _extract_json(resp)
+    result = _extract_json_from_text(text)
 
-    tokens_in = resp.usage.input_tokens
-    tokens_out = resp.usage.output_tokens
     get_cost_tracker().record(AI_MODEL, tokens_in, tokens_out)
 
     meta = {
@@ -191,6 +225,16 @@ def _invoke(system_prompt, user_prompt):
         "fallback_reason": None,
     }
     return result, meta
+
+
+def _extract_json_from_text(text):
+    """Pull the text out and strip any ``` fencing."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # drop the fence lines, keep the middle
+        text = "\n".join(lines[1:-1]) if len(lines) >= 3 else text.strip("`")
+    return json.loads(text.strip())
 
 
 def _fallback_grade(role, question, answer, reason="rule_based"):
