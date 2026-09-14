@@ -1,6 +1,6 @@
 ### unJobless - AI Interview Practice
 
-unJobless is light Flask based AI powered Job interview all-in-one prep website designed for technical jobs seekers to score a job in this horrendous job market. It has a retro styled light mode design, now with professionalism as a priority and you can get a results PDF of how cooked you are! Get better insights with graphs and pie charts (we all know your cooked either way).
+unJobless is light Flask based AI powered Job interview all-in-one prep website designed for technical jobs seekers to score a job in this horrendous job market. It has a retro styled light mode design, now with professionalism as a priority and you can get a results PDF of how cooked you are! Get better insights with graphs and pie charts, but does it truly matter?
 
 <img width="874" height="691" alt="Screenshot 2026-07-14 at 4 28 59 PM" src="https://github.com/user-attachments/assets/485dd8f1-0079-4b61-b8b8-54a9af95baac" />
 <img width="794" height="300" alt="Screenshot 2026-07-14 at 4 28 27 PM" src="https://github.com/user-attachments/assets/9f8ce48f-11bb-4ec1-990f-12238704edfb" />
