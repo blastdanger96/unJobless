@@ -113,15 +113,24 @@ async function init() {
     await ensureSession();
     await loadQuestion();
 
-    // Ensure modal is hidden on new session start
+    // CRITICAL: Ensure modal is ALWAYS hidden on new role start
+    // This prevents the modal from showing automatically
     const modal = $('correction-modal');
     if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('visible');
         modal.style.display = 'none';
+        modal.style.visibility = 'hidden';
     }
     currentImproved = '';
     currentChanges = [];
+
+    // Also ensure the improve button state is correct
+    const improveBtn = $('improve-btn');
+    if (improveBtn) {
+        improveBtn.disabled = false;
+        improveBtn.style.display = 'inline-block';
+    }
 }
 
 function updateWordCount() {
@@ -491,10 +500,19 @@ async function improveAnswer() {
 
 function showCorrection(explanation, changes) {
     const modal = $('correction-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.classList.add('visible');
-    }
+    if (!modal) return;
+
+    // First ensure any previous state is cleared
+    modal.classList.add('hidden');
+    modal.classList.remove('visible');
+    modal.style.display = 'none';
+    modal.style.visibility = 'hidden';
+
+    // Now show the modal with content
+    modal.classList.remove('hidden');
+    modal.classList.add('visible');
+    modal.style.display = 'block';
+    modal.style.visibility = 'visible';
 
     $('correction-explanation').innerHTML =
         `<p class="correction-explanation">${escapeHtml(explanation)}</p>`;
@@ -524,11 +542,15 @@ function applyCorrection() {
 
 function closeCorrection() {
     const modal = $('correction-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('visible');
-        modal.style.display = 'none';
-    }
+    if (!modal) return;
+
+    // Always hide the modal completely
+    modal.classList.add('hidden');
+    modal.classList.remove('visible');
+    modal.style.display = 'none';
+    modal.style.visibility = 'hidden';
+
+    // Clear state
     currentImproved = '';
     currentChanges = [];
 }
