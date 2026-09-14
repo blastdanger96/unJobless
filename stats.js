@@ -8,7 +8,7 @@ async function init() {
     if (!authToken) { location.href = 'index.html'; return; }
     console.log('init stats', authToken?.slice(0, 10), sessionToken?.slice(0, 10));
 
-    var headers = { 'Authorisation': 'Bearer ' + authToken };
+    var headers = { 'Authorization': 'Bearer ' + authToken };
     if (sessionToken) headers['X-Session-Token'] = sessionToken;
 
     var r = await fetch('/stats/unlock-status', { headers: headers });
@@ -100,7 +100,7 @@ function buildCharts(d) {
             options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false }, title: { display: true, text: 'Average Score by Difficulty', font: { family: 'Press Start 2P', size: 16 }}}, scales: { y: { beginAtZero: true, max: 3, ticks: { stepSize: 1, font: { family: 'VT323', size: 12 }}}, x: { ticks: { font: { family: 'VT323', size: 12 }} } } }
         });
     }
-////
+
     if (d.distribution) {
         var ctx4 = document.getElementById('chart-distribution').getContext('2d');
         if (distChart) distChart.destroy();
@@ -117,7 +117,7 @@ async function exportJSON() {
     var txt = btn.textContent;
     btn.disabled = true; btn.textContent = 'EXPORTING...';
     try {
-        var headers = { 'Authorisation': 'Bearer ' + authToken };
+        var headers = { 'Authorization': 'Bearer ' + authToken };
         if (sessionToken) headers['X-Session-Token'] = sessionToken;
         var r = await fetch('/stats/export/json', { headers: headers });
         if (r.status === 401) { localStorage.removeItem('auth_token'); location.href = 'index.html'; return; }
@@ -135,7 +135,7 @@ function exportPDF() {
     var btn = document.getElementById('export-all-pdf');
     var txt = btn.textContent;
     btn.disabled = true; btn.textContent = 'GENERATING PDF...';
-    var headers = { 'Authorisation': 'Bearer ' + authToken };
+    var headers = { 'Authorization': 'Bearer ' + authToken };
     if (sessionToken) headers['X-Session-Token'] = sessionToken;
     fetch('/stats/export/pdf', { headers: headers })
         .then(function(r) {

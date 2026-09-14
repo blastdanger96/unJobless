@@ -1,18 +1,31 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, g
 import random
 import json
 import os
+import uuid
 import hashlib
-from datetime import datetime, timedelta
+import logging
+from functools import wraps
+from io import BytesIO
+from datetime import datetime, timedelta, timezone
+
 from dotenv import load_dotenv
 load_dotenv()
 
 import jwt
-from ai_teacher import ai_grade, ai_correct, AI_ENABLED
+
+import ai_teacher
+from ai_teacher import ai_grade, ai_correct
+from grader import get_meta, get_difficulty, QUESTIONS as GRADER_QUESTIONS
 from cost_tracker import get_cost_tracker
 
-SECRET_KEY = os.getenv("JWT_SECRET", os.urandom(32).hex())
-TOKEN_EXPIRY_HOURS = 24 * 7  # 1 week
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
+
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET must be set in .env")
+TOKEN_EXPIRY_HOURS = 24 * 7  # a week
 
 app = Flask(__name__, static_folder='.')
 
@@ -22,82 +35,106 @@ try:
     with open(QUESTION_FILE, 'r', encoding='utf-8') as f:
         ROLE_DATA = json.load(f)['roles']
 except FileNotFoundError:
-    print(f"ERROR: {QUESTION_FILE} not found. Exiting.")
-    exit(1)
+    raise SystemExit(f"ERROR: {QUESTION_FILE} not found.")
 except json.JSONDecodeError as e:
-    print(f"ERROR: Invalid JSON in {QUESTION_FILE}: {e}")
-    exit(1)
+    raise SystemExit(f"ERROR: invalid JSON in {QUESTION_FILE}: {e}")
 
 QUESTIONS = {role: data['questions'] for role, data in ROLE_DATA.items()}
 
-# In-memory user store (replace with DB in production)
+# In-memory stores. Swap for a real DB before this goes anywhere near production.
 _users = {}
-_sessions = {}  # token -> {user_id, role, started_at, questions: []}
+_sessions = {}      # session_id -> {user_id, role, started_at, questions: []}
+_user_scores = {}   # user_id -> {points: [], by_role: {}, sessions: []}
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
 
 def _hash_pw(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
 
+
 def _make_token(user_id):
     payload = {
         "user_id": user_id,
-        "exp": datetime.utcnow() + timedelta(hours=TOKEN_EXPIRY_HOURS),
-        "iat": datetime.utcnow()
+        "exp": _now() + timedelta(hours=TOKEN_EXPIRY_HOURS),
+        "iat": _now(),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
+
 def _verify_token(token):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        return payload["user_id"]
-    except jwt.ExpiredSignatureError:
-        return None
+        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])["user_id"]
     except jwt.InvalidTokenError:
+        # covers expired tokens too, they subclass this
         return None
 
-def _get_user_id():
-    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
-    if not auth.startswith("Bearer "):
-        return None
-    return _verify_token(auth[7:])
 
-def _get_user_id_from_request():
-    # First try session token
-    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
+# --- auth ---------------------------------------------------------------
+# One place that figures out who is calling. The client sends either a JWT or
+# a session id in the Authorization header (and stats.js uses X-Session-Token),
+# so we check both and let the caller decide what it actually needs.
+
+def resolve_identity():
+    """Returns (user_id, session). Either can be None."""
+    auth = request.headers.get("Authorization") or ""
     if auth.startswith("Bearer "):
-        token = auth[7:]
-        session = _sessions.get(token)
-        if session:
-            return session['user_id']
-        # Fall back to auth token
-        return _verify_token(token)
-    return None
+        token = auth[7:].strip()
+    else:
+        token = ""
 
-def _check_user():
-    user_id = _get_user_id()
-    if not user_id:
-        return None, (jsonify({"error": "not logged in, bro"}), 401)
-    return user_id, None
+    session_header = (request.headers.get("X-Session-Token") or "").strip()
 
-# Words/phrases that signal structured answers — scored separately from content
-STRUCTURE_MARKERS = [
-    "first", "second", "third", "finally", "however",
-    "for example", "such as", "because", "therefore",
-    "on the other hand", "in contrast", "whereas",
-    "for instance", "this means", "which means"
-]
+    for candidate in (session_header, token):
+        if candidate and candidate in _sessions:
+            session = _sessions[candidate]
+            g.session_id = candidate
+            return session['user_id'], session
 
-EXAMPLE_MARKERS = [
-    "for example", "for instance", "e.g.", "such as", "in my experience",
-    "when i", "at my previous", "one time"
-]
+    if token:
+        user_id = _verify_token(token)
+        if user_id:
+            return user_id, None
 
-# Tracks last question shown per role to avoid immediate repeats
-_recent: dict = {}
-
-# Per-user score history: {user_id: {"points": [...], "by_role": {role: [...]}}}
-_user_scores: dict = {}
+    return None, None
 
 
+def require_user(fn):
+    """Route needs to know who the user is, session optional."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user_id, session = resolve_identity()
+        if not user_id:
+            return jsonify({'error': 'not logged in'}), 401
+        g.user_id = user_id
+        g.session = session
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def require_session(fn):
+    """Route needs an active interview session."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user_id, session = resolve_identity()
+        if not session:
+            return jsonify({'error': 'invalid or expired session'}), 401
+        g.user_id = user_id
+        g.session = session
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def _record_points(user_id, role, points):
+    record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}, 'sessions': []})
+    record['points'].append(points)
+    record['by_role'].setdefault(role, []).append(points)
+    return record
+
+
+# --- static -------------------------------------------------------------
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -108,7 +145,7 @@ def static_files(filename):
     return send_from_directory('.', filename)
 
 
-# --- Auth endpoints ---
+# --- auth endpoints -----------------------------------------------------
 @app.route('/auth/signup', methods=['POST'])
 def signup():
     data = request.get_json(silent=True) or {}
@@ -124,10 +161,9 @@ def signup():
     _users[email] = {
         'password': _hash_pw(password),
         'role': role,
-        'created_at': datetime.utcnow().isoformat()
+        'created_at': _now().isoformat(),
     }
-    token = _make_token(email)
-    return jsonify({'token': token, 'role': role})
+    return jsonify({'token': _make_token(email), 'role': role})
 
 
 @app.route('/auth/login', methods=['POST'])
@@ -140,103 +176,88 @@ def login():
     if not user or user['password'] != _hash_pw(password):
         return jsonify({'error': 'invalid credentials'}), 401
 
-    token = _make_token(email)
-    return jsonify({'token': token, 'role': user.get('role', '')})
+    return jsonify({'token': _make_token(email), 'role': user.get('role', '')})
 
 
-@app.route('/auth/me', methods=['GET'])
+@app.route('/auth/me')
+@require_user
 def me():
-    user_id, err = _check_user()
-    if err:
-        return err
-    user = _users.get(user_id, {})
-    return jsonify({'email': user_id, 'role': user.get('role', '')})
+    user = _users.get(g.user_id, {})
+    return jsonify({'email': g.user_id, 'role': user.get('role', '')})
 
 
-# --- Session endpoints ---
+# --- session endpoints --------------------------------------------------
 @app.route('/session/start', methods=['POST'])
+@require_user
 def start_session():
-    user_id, err = _check_user()
-    if err:
-        return err
-
     data = request.get_json(silent=True) or {}
     role = data.get('role', '').strip()
     if role not in QUESTIONS:
         return jsonify({'error': 'invalid role'}), 400
 
-    token = _make_token(user_id)
-    _sessions[token] = {
-        'user_id': user_id,
+    # random id, NOT a JWT - two sessions started in the same second used to
+    # produce an identical token and clobber each other
+    session_id = uuid.uuid4().hex
+    _sessions[session_id] = {
+        'user_id': g.user_id,
         'role': role,
-        'started_at': datetime.utcnow().isoformat(),
-        'questions': []
+        'started_at': _now().isoformat(),
+        'questions': [],
     }
-    return jsonify({'session_token': token, 'role': role})
+    return jsonify({'session_token': session_id, 'role': role})
 
 
-@app.route('/session/question', methods=['GET'])
+@app.route('/session/question')
+@require_session
 def session_question():
-    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
-    if not auth.startswith('Bearer '):
-        return jsonify({'error': 'unauthorized'}), 401
-    token = auth[7:]
-    session = _sessions.get(token)
-    if not session:
-        return jsonify({'error': 'invalid session'}), 401
-
+    session = g.session
     role = session['role']
     pool = QUESTIONS[role]
+
     last_q = session['questions'][-1]['question'] if session['questions'] else None
     available = [q for q in pool if q['q'] != last_q] or pool
     chosen = random.choice(available)
 
-    difficulty = get_difficulty(chosen.get('ideal_length', 80))
-    session['questions'].append({'question': chosen['q'], 'asked_at': datetime.utcnow().isoformat()})
+    session['questions'].append({
+        'question': chosen['q'],
+        'asked_at': _now().isoformat(),
+    })
 
-    return jsonify({'question': chosen['q'], 'role': role, 'difficulty': difficulty})
+    return jsonify({
+        'question': chosen['q'],
+        'role': role,
+        'difficulty': get_difficulty(chosen.get('ideal_length', 80)),
+    })
 
 
 @app.route('/session/submit', methods=['POST'])
+@require_session
 def session_submit():
-    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
-    if not auth.startswith('Bearer '):
-        return jsonify({'error': 'unauthorized'}), 401
-    token = auth[7:]
-    session = _sessions.get(token)
-    if not session:
-        return jsonify({'error': 'invalid session'}), 401
-
+    session = g.session
     data = request.get_json(silent=True) or {}
     answer = data.get('answer', '').strip()
+
     if len(answer) < 20:
         return jsonify({'error': 'Answer too short'}), 400
+    if not session['questions']:
+        return jsonify({'error': 'No active question. Fetch a question first.'}), 400
 
-    question = session['questions'][-1]['question'] if session['questions'] else ''
+    current = session['questions'][-1]
+    question = current['question']
     role = session['role']
 
-    meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
-    ai_result = ai_grade(role, question, answer, meta)
+    result = ai_grade(role, question, answer, get_meta(role, question))
+    feedback = result['feedback']
+    points = result['points']
+    breakdown = result['breakdown']
+    grader = 'rule' if result.get('_meta', {}).get('fallback_reason') else 'ai'
 
-    if ai_result:
-        feedback = ai_result["feedback"]
-        points = ai_result['points']
-        breakdown = ai_result['breakdown']
-        grader = "ai"
-    else:
-        feedback, points, breakdown = grade(role, answer, question)
-        grader = "rule"
-
-    user_id = session['user_id']
-    user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
-    user_record['points'].append(points)
-    user_record['by_role'].setdefault(role, []).append(points)
-
-    session['questions'][-1].update({
+    _record_points(session['user_id'], role, points)
+    current.update({
         'answer': answer,
         'points': points,
         'feedback': feedback,
-        'grader': grader
+        'grader': grader,
     })
 
     return jsonify({
@@ -248,263 +269,120 @@ def session_submit():
     })
 
 
-@app.route('/session/end', methods=['POST'])
-def end_session():
-    auth = request.headers.get('Authorization') or request.headers.get('Authorisation') or ''
-    if not auth.startswith('Bearer '):
-        return jsonify({'error': 'unauthorized'}), 401
-    token = auth[7:]
-    session = _sessions.pop(token, None)
-    if not session:
-        return jsonify({'error': 'invalid session'}), 401
+@app.route('/session/correct', methods=['POST'])
+@require_session
+def session_correct():
+    session = g.session
+    data = request.get_json(silent=True) or {}
+    answer = data.get('answer', '').strip()
 
+    if len(answer) < 20:
+        return jsonify({'error': 'Answer too short to improve'}), 400
+    if not session['questions']:
+        return jsonify({'error': 'No active question.'}), 400
+
+    current = session['questions'][-1]
+    question = current['question']
+    role = session['role']
+    # if they haven't submitted yet there's no feedback to work from, that's fine
+    feedback = current.get('feedback', '')
+
+    result = ai_correct(role, question, answer, get_meta(role, question), feedback)
+    improvements = result.get('key_improvements', [])
+
+    return jsonify({
+        'improved': result['improved_answer'],
+        'changes': result.get('changes', []),
+        'explanation': ' '.join(improvements) if improvements else 'Suggested improvements below.',
+        'source': 'rule' if result.get('_meta', {}).get('fallback_reason') else 'ai',
+    })
+
+
+@app.route('/session/end', methods=['POST'])
+@require_session
+def end_session():
+    session = _sessions.pop(g.session_id)
     total = sum(q.get('points', 0) for q in session['questions'])
-    
-    user_id = session['user_id']
-    user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}, 'sessions': []})
-    user_record.setdefault('sessions', []).append({
+
+    record = _user_scores.setdefault(
+        session['user_id'], {'points': [], 'by_role': {}, 'sessions': []}
+    )
+    record.setdefault('sessions', []).append({
         'role': session['role'],
-        'completed_at': datetime.utcnow().isoformat(),
-        'questions': session['questions']
+        'completed_at': _now().isoformat(),
+        'questions': session['questions'],
     })
 
     return jsonify({
         'total_points': total,
         'questions_answered': len(session['questions']),
-        'questions': session['questions']
+        'questions': session['questions'],
     })
 
 
-def get_difficulty(ideal_length):
-    if ideal_length <= 85:
-        return 'easy'
-    elif ideal_length <= 100:
-        return 'medium'
-    else:
-        return 'hard'
-
-def _get_session(token):
-    return _sessions.get(token)
-
-
-def _get_session_from_request():
-    auth = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
-    if auth.startswith("Bearer "):
-        token = auth[7:]
-        return _sessions.get(token)
-    return None
-
-
-@app.route('/question')
-def get_question():
-    # Try session first, fall back to query param
-    session = _get_session_from_request()
-    if session:
-        role = session['role']
-        pool = QUESTIONS[role]
-        last_q = session['questions'][-1]['question'] if session['questions'] else None
-        available = [q for q in pool if q['q'] != last_q] or pool
-        chosen = random.choice(available)
-        difficulty = get_difficulty(chosen.get('ideal_length', 80))
-        session['questions'].append({'question': chosen['q'], 'asked_at': datetime.utcnow().isoformat()})
-        return jsonify({'question': chosen['q'], 'role': role, 'difficulty': difficulty})
-
-    # Fallback: legacy query param mode (no session tracking)
-    role = request.args.get('role', '').strip()
-    if role not in QUESTIONS:
-        return jsonify({'error': f'Unknown role: {role}'}), 400
-
-    pool = QUESTIONS[role]
-    last = _recent.get(role)
-    available = [q for q in pool if q['q'] != last] or pool
-    chosen = random.choice(available)
-    _recent[role] = chosen['q']
-
-    difficulty = get_difficulty(chosen.get('ideal_length', 80))
-    return jsonify({'question': chosen['q'], 'role': role, 'difficulty': difficulty})
-
-
-@app.route('/submit', methods=['POST'])
-def submit():
-    body = request.get_json(silent=True)
-    if not body:
-        return jsonify({'error': 'No data received'}), 400
-
-    # Try session first
-    session = _get_session_from_request()
-    if session:
-        role = session['role']
-        question = session['questions'][-1]['question'] if session['questions'] else ''
-        user_id = session['user_id']
-    else:
-        # Legacy mode - get user_id from auth token if available
-        user_id = _get_user_id_from_request() or body.get('user_id', 'anonymous').strip() or 'anonymous'
-        role = body.get('role', '').strip()
-        question = _recent.get(role, '')
-
-    answer = body.get('answer', '').strip()
-    if role not in QUESTIONS:
-        return jsonify({'error': 'Invalid role'}), 400
-    if len(answer) < 20:
-        return jsonify({'error': 'Answer too short'}), 400
-
-    meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
-    ai_result = ai_grade(role, question, answer, meta)
-
-    if ai_result:
-        feedback = ai_result["feedback"]
-        points = ai_result['points']
-        breakdown = ai_result['breakdown']
-        grader = "ai"
-    else:
-        feedback, points, breakdown = grade(role, answer, question)
-        grader = "rule"
-
-    user_record = _user_scores.setdefault(user_id, {'points': [], 'by_role': {}})
-    user_record['points'].append(points)
-    user_record['by_role'].setdefault(role, []).append(points)
-
-    if session:
-        session['questions'][-1]['answer'] = answer
-        session['questions'][-1]['points'] = points
-        session['questions'][-1]['feedback'] = feedback
-
-    return jsonify({
-        'feedback': feedback,
-        'points': points,
-        'breakdown': breakdown,
-        'max_points': 3,
-        'grader': grader,
-    })
-
-
-@app.route('/correct', methods=['POST'])
-def correct():
-    body = request.get_json(silent=True)
-    if not body:
-        return jsonify({'error': 'No data received'}), 400
-
-    session = _get_session_from_request()
-    if session:
-        role = session['role']
-        question = session['questions'][-1]['question'] if session['questions'] else ''
-    else:
-        role = body.get('role', '').strip()
-        question = _recent.get(role, '')
-
-    answer = body.get('answer', '').strip()
-    if len(answer) < 20:
-        return jsonify({'error': 'Answer too short'}), 400
-
-    meta = next((q for q in QUESTIONS.get(role, []) if q['q'] == question), {})
-    
-    # First get the grading feedback
-    ai_result = ai_grade(role, question, answer, meta)
-    if ai_result and "error" not in ai_result:
-        feedback = ai_result["feedback"]
-    else:
-        feedback, _, _ = grade(role, answer, question)
-    
-    result = ai_correct(role, question, answer, meta, feedback)
-
-    if not result or "error" in result:
-        error_msg = result.get("message", "Correction unavailable") if result else "Correction unavailable"
-        return jsonify({'error': error_msg}), 503
-
-    return jsonify({
-        'improved': result['improved_answer'],
-        'changes': result['changes'],
-        'explanation': result.get('explanation') or result.get('key_improvements', ['Rule-based improvement applied'])
-    })
-
+# --- stats --------------------------------------------------------------
 @app.route('/status')
+@require_user
 def get_status():
-    user_id = request.args.get('user', 'anonymous')
-    score_data = _user_scores.get(user_id)
-    if not score_data or not score_data['points']:
+    data = _user_scores.get(g.user_id)
+    if not data or not data['points']:
         return jsonify({'score': 0, 'answered': 0, 'average': 0, 'by_role': {}})
 
-    total = sum(score_data['points'])
-    answered = len(score_data['points'])
-    avg = total / answered
-
+    total = sum(data['points'])
+    answered = len(data['points'])
     return jsonify({
         'score': total,
         'answered': answered,
-        'average': round(avg, 2),
-        'by_role': score_data['by_role']
+        'average': round(total / answered, 2),
+        'by_role': data['by_role'],
     })
 
 
 @app.route('/leaderboard')
 def leaderboard():
-    """Top scores per role."""
     role = request.args.get('role', '').strip()
-    limit = min(int(request.args.get('limit', 10)), 50)
+    try:
+        limit = min(int(request.args.get('limit', 10)), 50)
+    except ValueError:
+        limit = 10
 
     if role and role not in QUESTIONS:
         return jsonify({'error': 'Invalid role'}), 400
 
-    leaderboard = []
+    rows = []
     for user_id, data in _user_scores.items():
-        roles = data.get('by_role', {})
         if role:
-            points = sum(roles.get(role, []))
-            if points > 0:
-                leaderboard.append({'user': user_id, 'score': points})
+            rb = data.get('by_role', {}).get(role, [])
+            points = sum(rb) if isinstance(rb, list) else 0
         else:
-            total = sum(data.get('points', []))
-            if total > 0:
-                leaderboard.append({'user': user_id, 'score': total})
+            points = sum(data.get('points', [])) if isinstance(data.get('points', []), list) else 0
+        if points > 0:
+            rows.append({'user': user_id, 'score': points})
 
-    leaderboard.sort(key=lambda x: x['score'], reverse=True)
-    return jsonify({'leaderboard': leaderboard[:limit], 'role': role or 'all'})
+    rows.sort(key=lambda x: x['score'], reverse=True)
+    return jsonify({'leaderboard': rows[:limit], 'role': role or 'all'})
 
 
 @app.route('/history')
+@require_user
 def history():
-    """Get user's interview history (requires auth)."""
-    user_id, err = _check_user()
-    if err:
-        return err
-
-    data = _user_scores.get(user_id)
-    if not data:
-        return jsonify({'history': []})
+    data = _user_scores.get(g.user_id)
+    points = data.get('points', []) if data else []
+    if not points:
+        return jsonify({'history': [], 'total_score': 0, 'answered': 0, 'average': 0, 'by_role': {}})
 
     return jsonify({
-        'total_score': sum(data.get('points', [])),
-        'answered': len(data.get('points', [])),
-        'average': round(sum(data.get('points', [])) / len(data['points']), 2) if data.get('points') else 0,
-        'by_role': data.get('by_role', {})
+        'total_score': sum(points),
+        'answered': len(points),
+        'average': round(sum(points) / len(points), 2),
+        'by_role': data.get('by_role', {}),
     })
 
+
 @app.route('/stats/unlock-status')
+@require_user
 def stats_unlock():
-    user_id, err = _check_user()
-    auth_header = request.headers.get("Authorization") or request.headers.get("Authorisation") or ""
-    # Debug logging to track user_id resolution
-    print(f"DEBUG stats_unlock: auth_header_present={bool(auth_header)}, user_id={user_id}, err={err}")
-    
-    if err:
-        # Try session token from custom header (sent by stats.js)
-        session_token = request.headers.get("X-Session-Token")
-        if not session_token:
-            # Fallback: try Authorization header as session token
-            auth = auth_header
-            if auth.startswith("Bearer "):
-                session_token = auth[7:]
-        if session_token:
-            session = _sessions.get(session_token)
-            if session:
-                user_id = session['user_id']
-                err = None
-                print(f"DEBUG stats_unlock: fallback to session, user_id={user_id}")
-    if err:
-        return err
-    data = _user_scores.get(user_id, {})
-    answered = len(data.get('points', []))
-    print(f"DEBUG stats_unlock: final user_id={user_id}, answered={answered}")
+    answered = len(_user_scores.get(g.user_id, {}).get('points', []))
     return jsonify({
         'unlocked': answered >= 1,
         'answered': answered,
@@ -513,152 +391,132 @@ def stats_unlock():
 
 
 @app.route('/stats/summary')
+@require_user
 def stats_summary():
-    user_id, err = _check_user()
-    if err:
-        return err
-    data = _user_scores.get(user_id, {})
+    data = _user_scores.get(g.user_id, {})
     points = data.get('points', [])
     by_role = data.get('by_role', {})
+
     total_q = len(points)
     avg = round(sum(points) / total_q, 1) if total_q else 0.0
-    streak = _calc_streak(user_id)
     best_role = max(by_role, key=lambda r: sum(by_role[r]) / len(by_role[r])) if by_role else '-'
+
     return jsonify({
         'total_questions': total_q,
         'avg_score': avg,
-        'streak': streak,
-        'best_role': best_role
+        'streak': _calc_streak(g.user_id),
+        'best_role': best_role,
     })
 
 
 def _calc_streak(user_id):
-    sessions = []
-    for u_id, sessions_data in _user_scores.items():
-        if u_id == user_id:
-            sessions = sessions_data.get('sessions', [])
-            break
-    if not sessions:
-        return 0
+    sessions = _user_scores.get(user_id, {}).get('sessions', [])
     dates = set()
     for s in sessions:
-        dt = s.get('completed_at', '')
-        if dt:
-            dates.add(dt[:10])
+        ca = s.get('completed_at')
+        if ca:
+            dates.add(ca[:10] if isinstance(ca, str) else str(ca)[:10])
     if not dates:
         return 0
-    today = datetime.utcnow().date().isoformat()
-    yesterday = (datetime.utcnow().date() - timedelta(days=1)).isoformat()
-    current = today if today in dates else (yesterday if yesterday in dates else None)
-    if not current:
+
+    today = _now().date()
+    dates_fmt = {d.isoformat() if not isinstance(d, str) else d for d in dates}
+
+    if today.isoformat() in dates_fmt:
+        current = today
+    elif (today - timedelta(days=1)).isoformat() in dates_fmt:
+        current = today - timedelta(days=1)
+    else:
         return 0
+
     streak = 0
-    for d in sorted(dates, reverse=True):
-        if d == current:
-            streak += 1
-            current = (datetime.fromisoformat(current) - timedelta(days=1)).date().isoformat()
-        elif d < current:
-            break
+    while current.isoformat() in dates_fmt:
+        streak += 1
+        current -= timedelta(days=1)
     return streak
 
 
 @app.route('/stats/chart-data')
+@require_user
 def stats_chart_data():
-    user_id, err = _check_user()
-    if err:
-        return err
-    data = _user_scores.get(user_id, {})
+    data = _user_scores.get(g.user_id, {})
     points = data.get('points', [])
-    by_role = data.get('by_role', {})
     sessions = data.get('sessions', [])
-    
+
     time_series = []
-    for i, s in enumerate(sessions):
-        for q in s.get('questions', []):
-            time_series.append({
-                'index': len(time_series) + 1,
-                'date': s.get('completed_at', '')[:10],
-                'score': q.get('points', 0),
-                'role': s.get('role', ''),
-                'question': q.get('question', '')[:50]
-            })
-    
-    by_role_avg = {}
-    for role, scores in by_role.items():
-        by_role_avg[role] = round(sum(scores) / len(scores), 2)
-    
     by_difficulty = {'easy': [], 'medium': [], 'hard': []}
+
     for s in sessions:
         role = s.get('role', '')
         for q in s.get('questions', []):
             q_text = q.get('question', '')
-            meta = next((qq for qq in QUESTIONS.get(role, []) if qq['q'] == q_text), {})
-            ideal = meta.get('ideal_length', 80)
-            if ideal <= 85:
-                diff = 'easy'
-            elif ideal <= 100:
-                diff = 'medium'
-            else:
-                diff = 'hard'
-            by_difficulty[diff].append(q.get('points', 0))
-    by_diff_avg = {}
-    for diff, scores in by_difficulty.items():
-        if scores:
-            by_diff_avg[diff] = round(sum(scores) / len(scores), 2)
-    
+            time_series.append({
+                'index': len(time_series) + 1,
+                'date': s.get('completed_at', '')[:10],
+                'score': q.get('points', 0),
+                'role': role,
+                'question': q_text[:50],
+            })
+            ideal = get_meta(role, q_text).get('ideal_length', 80)
+            by_difficulty[get_difficulty(ideal)].append(q.get('points', 0))
+
+    by_role_avg = {
+        role: round(sum(scores) / len(scores), 2)
+        for role, scores in data.get('by_role', {}).items() if scores
+    }
+    by_diff_avg = {
+        diff: round(sum(scores) / len(scores), 2)
+        for diff, scores in by_difficulty.items() if scores
+    }
+
     dist = {0: 0, 1: 0, 2: 0, 3: 0}
     for p in points:
         if p in dist:
             dist[p] += 1
-    
+
     return jsonify({
         'time_series': time_series,
         'by_role': by_role_avg,
         'by_difficulty': by_diff_avg,
-        'distribution': dist
+        'distribution': dist,
     })
 
 
 @app.route('/stats/export/json')
+@require_user
 def stats_export_json():
-    user_id, err = _check_user()
-    if err:
-        return err
-    data = _user_scores.get(user_id, {})
-    from flask import Response
+    data = _user_scores.get(g.user_id, {})
     return Response(
         json.dumps(data, indent=2),
         mimetype='application/json',
-        headers={'Content-Disposition': f'attachment; filename=unjobless_history_{user_id}.json'}
+        headers={'Content-Disposition': f'attachment; filename=unjobless_history_{g.user_id}.json'},
     )
 
 
 @app.route('/stats/export/pdf')
+@require_user
 def stats_export_pdf():
-    user_id, err = _check_user()
-    if err:
-        return err
-    data = _user_scores.get(user_id, {})
     try:
         from fpdf import FPDF
     except ImportError:
         return jsonify({'error': 'PDF generation not available'}), 503
-    
+
+    user_id = g.user_id
+    data = _user_scores.get(user_id, {})
+    points = data.get('points', [])
+    sessions = data.get('sessions', [])
+    total_q = len(points)
+    avg = round(sum(points) / total_q, 1) if total_q else 0.0
+
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font('Helvetica', 'B', 20)
     pdf.cell(0, 12, 'unJobless - Interview Report', ln=True, align='C')
     pdf.set_font('Helvetica', '', 10)
     pdf.cell(0, 7, f'User: {user_id}', ln=True, align='C')
-    pdf.cell(0, 7, f'Generated: {datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")}', ln=True, align='C')
+    pdf.cell(0, 7, f'Generated: {_now().strftime("%Y-%m-%d %H:%M UTC")}', ln=True, align='C')
     pdf.ln(8)
-    
-    points = data.get('points', [])
-    by_role = data.get('by_role', {})
-    sessions = data.get('sessions', [])
-    total_q = len(points)
-    avg = round(sum(points) / total_q, 1) if total_q else 0.0
-    
+
     pdf.set_font('Helvetica', 'B', 14)
     pdf.cell(0, 10, 'Summary', ln=True)
     pdf.set_font('Helvetica', '', 11)
@@ -666,7 +524,7 @@ def stats_export_pdf():
     pdf.cell(0, 7, f'Total Questions: {total_q}', ln=True)
     pdf.cell(0, 7, f'Average Score: {avg}/3.0', ln=True)
     pdf.ln(5)
-    
+
     pdf.set_font('Helvetica', 'B', 14)
     pdf.cell(0, 10, 'Session History', ln=True)
     for i, s in enumerate(sessions, 1):
@@ -674,218 +532,42 @@ def stats_export_pdf():
         pdf.cell(0, 8, f'Session {i} - {s.get("role", "Unknown")} - {s.get("completed_at", "")[:10]}', ln=True)
         pdf.set_font('Helvetica', '', 10)
         for j, q in enumerate(s.get('questions', []), 1):
-            pdf.cell(0, 6, f'  Q{j}: {q.get("question", "")[:80]}...', ln=True)
+            pdf.cell(0, 6, f'  Q{j}: {q.get("question", "")[:80]}', ln=True)
             pdf.cell(0, 6, f'     Score: {q.get("points", 0)}/3', ln=True)
             if q.get('feedback'):
                 pdf.set_font('Helvetica', 'I', 9)
-                pdf.multi_cell(0, 5, f'     Feedback: {q["feedback"][:120]}...')
+                pdf.multi_cell(0, 5, f'     Feedback: {q["feedback"][:120]}')
                 pdf.set_font('Helvetica', '', 10)
         pdf.ln(3)
-    
-    from io import BytesIO
+
     buf = BytesIO()
     pdf.output(buf)
     buf.seek(0)
-    from flask import Response
     return Response(
         buf.getvalue(),
         mimetype='application/pdf',
-        headers={'Content-Disposition': f'attachment; filename=unjobless_report_{user_id}.pdf'}
+        headers={'Content-Disposition': f'attachment; filename=unjobless_report_{user_id}.pdf'},
     )
 
 
-def grade(role, answer, question):
-    # Find question metadata to get keywords/concepts for this specific question
-    meta = next(
-        (q for q in QUESTIONS.get(role, []) if q['q'] == question),
-        None
-    )
-    if not meta:
-        return basic_grade(answer)
-
-    answer_lower = answer.lower()
-    words = answer_lower.split()
-    word_count = len(words)
-    ideal_length = meta.get('ideal_length', 80)
-
-    # Length score (0-2)
-    if word_count >= ideal_length:
-        length_score = 2
-    elif word_count >= ideal_length * 0.6:
-        length_score = 1
-    else:
-        length_score = 0
-
-    # Keyword score (0-2) - half keywords = 2, 20% = 1
-    keywords = meta.get('keywords', [])
-    keyword_hits = [k for k in keywords if k.lower() in answer_lower]
-    if len(keyword_hits) >= len(keywords) * 0.5:
-        keyword_score = 2
-    elif len(keyword_hits) >= len(keywords) * 0.2:
-        keyword_score = 1
-    else:
-        keyword_score = 0
-
-    # Concept score (0-2) - 40% = 2, 20% = 1
-    concepts = meta.get('concepts', [])
-    concept_hits = [c for c in concepts if c.lower() in answer_lower]
-    if len(concept_hits) >= len(concepts) * 0.4:
-        concept_score = 2
-    elif len(concept_hits) >= len(concepts) * 0.2:
-        concept_score = 1
-    else:
-        concept_score = 0
-
-    # Structure score (0-2)
-    structure_hits = sum(1 for m in STRUCTURE_MARKERS if m in answer_lower)
-    if structure_hits >= 2:
-        structure_score = 2
-    elif structure_hits == 1:
-        structure_score = 1
-    else:
-        structure_score = 0
-
-    # Example score (0-2)
-    has_example = any(m in answer_lower for m in EXAMPLE_MARKERS)
-    example_score = 2 if has_example else 0
-
-    # Weighted composite: keywords/concepts 50%, length 30%, structure/examples 20%
-    raw = (
-        length_score * 0.2 +
-        keyword_score * 0.3 +
-        concept_score * 0.3 +
-        structure_score * 0.1 +
-        example_score * 0.1
-    )
-
-    # Bucket into 0-3 display points
-    if raw >= 1.5:
-        points = 3
-    elif raw >= 1.0:
-        points = 2
-    elif raw >= 0.5:
-        points = 1
-    else:
-        points = 0
-
-    # Build feedback inline
-    lines = []
-    if points == 3:
-        lines.append("Very well done, you have scored full marks for this question because of your enhanced ability to solve application-based questions, usually asked in interviews.")
-        if keyword_hits:
-            lines.append(f"u have also elaborated on various key terms correctly such as: {', '.join(keyword_hits)}.")
-        if not has_example:
-            lines.append("u could've also worked on using some examples, interviewers do look for that, so they are also as much important as the explaination! ")
-
-    elif points == 2:
-        lines.append("Good job, you have done quite well, definitely could have done better cuz u got the potential fs but not badd.")
-        missed_keywords = [k for k in keywords if k not in keyword_hits][:3]
-        if missed_keywords:
-            lines.append(f"u rlly should consider using these missed keywords in ur code for tht perfect answer {', '.join(missed_keywords)}.")
-        if not has_example:
-            lines.append("try adding examples, interviewers prefer that over yap, it shows u can apply stuff irl soo")
-        if word_count < ideal_length * 0.7:
-            lines.append("okay not tht consise, you still have to mention all the key terms and important things, make sure to include examples.")
-
-    elif points == 1:
-        lines.append("okay see now you could do soo much better than this, u definitely got the potential in u")
-        if word_count < ideal_length * 0.5:
-            lines.append("okay not tht consise, you still have to mention all the key terms and important things, make sure to include examples.")
-        missed_concepts = [c for c in concepts if c not in concept_hits][:3]
-        if missed_concepts:
-            lines.append(f" u hv missed out on many critical ideas and words you need to give an explaination for {', '.join(missed_concepts)}.")
-        if not has_example:
-            lines.append("use examples bru, interviewers prefer that over yap, it shows u can apply stuff irl soo ")
-
-    else:
-        lines.append("yeah im sry this is completely wrong, you have been unable to answer the question with the needed key terms, better bring ur A game to this next time!")
-        lines.append("start with the definition. explain how it works. give an example which shows how you apply it in the real world.")
-        if keywords:
-            lines.append(f"use terms like this (for reference):- {', '.join(keywords[:4])}.")
-
-    feedback = " ".join(lines)
-
-    # Build breakdown inline
-    breakdown_lines = []
-    if keywords and len(keyword_hits) >= len(keywords) * 0.5:
-        breakdown_lines.append(f"+ used key technical terms like ({', '.join(keyword_hits[:3])})")
-    elif keyword_hits:
-        breakdown_lines.append(f"~ some technical terms present but need more emphasis ({', '.join(keyword_hits[:2])})")
-    else:
-        breakdown_lines.append("- missing key technical terminology")
-
-    if concepts and len(concept_hits) >= len(concepts) * 0.4:
-        breakdown_lines.append("+ gg gng ur pretty good on the core concepts")
-    elif concept_hits:
-        breakdown_lines.append("~ core concepts touched on but u need to yap on more")
-    else:
-        breakdown_lines.append(f"- ye bru u gotta yap more ({word_count} vs ~{ideal_length} ideal) or else u finna be cooked ash icl")
-
-    if has_example:
-        breakdown_lines.append("+ included an example, good job dawg")
-    elif word_count < ideal_length * 0.6:
-        breakdown_lines.append("- answer is too short AND missing an example, add one to make it convincing")
-    else:
-        breakdown_lines.append("- touch grass and put in a real example")
-
-    if structure_hits >= 2:
-        breakdown_lines.append("+ g00d structure markers (first, second, finally) to organize your answer, bru finally bothered lockin in on ts")
-    else:
-        breakdown_lines.append("- yea bru u need to start lockin in on structure, ts aint tuff icl")
-
-    breakdown = '\n'.join(breakdown_lines)
-
-    # print(f"Debug: word_count={word_count}, raw={raw}, points={points}")  # uncomment if needed
-    return feedback, points, breakdown
-
-
-def basic_grade(answer):
-    # fallback grading when no question metadata exists - scores on length + example only
-    has_example = any(m in answer.lower() for m in EXAMPLE_MARKERS)
-    words = len(answer.split())
-
-    if words < 30:
-        feedback = "u hv to elaborate more on key terms related to the question, this js ain't gonna cut it."
-        points = 0
-        breakdown = "- answer is too short, add more detail and examples"
-    elif words < 80:
-        feedback = "okay had u added a few more points and explained them in detail, you very well could have easily done so much better. Believe in urself u got this!"
-        points = 1
-        breakdown = "decent attempt but light on detail, add more substance"
-    elif words < 150:
-        feedback = "yoo ts is firee, on ur way to landin on a hot bag, keep cookin bro"
-        points = 2
-        breakdown = "+ decent shi ngl could use more specificity to really seal it tho but eh u got this dw"
-    else:
-        feedback = "my goat man u finally locked in on ts and u sound like u know ur shi, gg gng, u gonna rock tht interview"
-        points = 3
-        breakdown = "+ thorough answer with good depth, good stuff bro"
-
-    if not has_example:
-        breakdown += "\n- no example detected, always back up your answer with one"
-
-    return feedback, points, breakdown
-
-
+# --- meta ---------------------------------------------------------------
 @app.route('/health')
 def health():
-    from ai_teacher import AI_ENABLED, AI_MODEL
-    tracker = get_cost_tracker()
-    cost_status = tracker.get_status()
-
+    cost = get_cost_tracker().get_status()
     return jsonify({
         'status': 'running',
-        'ai_enabled': AI_ENABLED,
-        'model': AI_MODEL if AI_ENABLED else None,
-        'prompt_version': os.getenv("PROMPT_VERSION", "v1.0"),
-        'grader': 'hybrid (ai + rule fallback)' if AI_ENABLED else 'rule-based',
-        'cost_today_usd': cost_status["daily_usd"],
-        'cost_month_usd': cost_status["monthly_usd"],
-        'daily_limit_usd': cost_status["daily_limit_usd"],
-        'monthly_limit_usd': cost_status["monthly_limit_usd"],
-        'circuit_status': 'closed',
+        'ai_enabled': ai_teacher.AI_ENABLED,
+        'model': ai_teacher.AI_MODEL if ai_teacher.AI_ENABLED else None,
+        'prompt_version': ai_teacher.PROMPT_VERSION,
+        'grader': 'hybrid (ai + rule fallback)' if ai_teacher.AI_ENABLED else 'rule-based',
+        'circuit_status': ai_teacher.breaker.status(),
+        'cost_today_usd': cost['daily_usd'],
+        'cost_month_usd': cost['monthly_usd'],
+        'daily_limit_usd': cost['daily_limit_usd'],
+        'monthly_limit_usd': cost['monthly_limit_usd'],
         'roles': list(QUESTIONS.keys()),
-        'total_questions': sum(len(v) for v in QUESTIONS.values())
+        'total_questions': sum(len(v) for v in QUESTIONS.values()),
+        'grader_metadata_loaded': bool(GRADER_QUESTIONS),
     })
 
 
@@ -898,6 +580,6 @@ def get_roles():
 
 
 if __name__ == '__main__':
-    print(f"unst.J0e_bless running on localhost:8000 | {len(QUESTIONS)} roles | {sum(len(v) for v in QUESTIONS.values())} questions fetched")
+    total = sum(len(v) for v in QUESTIONS.values())
+    logger.info("unJobless on localhost:8000 | %d roles | %d questions", len(QUESTIONS), total)
     app.run(debug=True, port=8000)
-

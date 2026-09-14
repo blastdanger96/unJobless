@@ -1,276 +1,259 @@
-// dont reset em ☢️ they contain important info for the website
+// Interview page state. Don't reset these anywhere except resetAnswerUI().
 let role = null;
 let score = 0;
 let questionsAnswered = 0;
-let timeRemaining = 90;
-let timerInterval = null;
-const timer_sec = 90;
-let timerHidden = false;
-const SESSION_LENGTH = 5;
-const UNLOCK_THRESHOLD = 1;
 let authToken = null;
 let sessionToken = null;
-// AI correction stuff, its fun but expensive asf
+
+const QUESTION_SECONDS = 90;
+const SESSION_LENGTH = 5;
+
+let timeRemaining = QUESTION_SECONDS;
+let timerInterval = null;
+let timerHidden = false;
+
+// submit state - isSubmitting is only ever cleared in a finally block
+let isSubmitting = false;
+let isImproving = false;
+let submitAbortControl = null;
+
+// AI correction payload for the modal
 let currentImproved = '';
 let currentChanges = [];
-// submit state
-let isSubmitting = false;
-let submitAbortControl = null;
-// legacy fallback retry counter
-let legacyRetries = 0;
 
-// if it's busted, just goon- i mean retry once again
-async function fetchAPI(url, options) {
+
+// One fetch wrapper. No internal retries - the caller decides that, otherwise
+// you end up firing six requests for a single submit.
+async function apiFetch(url, options = {}) {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const err = new Error(data.error || `request failed (${res.status})`);
+        err.status = res.status;
+        throw err;
+    }
+    return res;
+}
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+
+async function initAuth() {
+    const existing = localStorage.getItem('auth_token');
+    if (existing) return existing;
+
+    // no login screen yet, so everyone gets an anonymous account
+    const email = 'anon_' + Math.random().toString(36).slice(2, 11) + '@unjobless.local';
     try {
-        const res = await fetch(url, options);
-        if (res.ok) return res;
-        throw new Error(`Server said ${res.status}`);
+        const res = await apiFetch('/auth/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: 'anonymous', role: '' })
+        });
+        const data = await res.json();
+        localStorage.setItem('auth_token', data.token);
+        return data.token;
     } catch (e) {
-        console.warn('fetch failed, retrying once...', e.message);
-        await new Promise(r => setTimeout(r, 500));
-        const res2 = await fetch(url, options);
-        if (!res2.ok) throw new Error(`Still failing: ${res2.status}`);
-        return res2;
+        console.error('anonymous signup failed', e);
+        return null;
     }
 }
 
-async function initAuth() {
-    // get or create anonomous token
+async function ensureSession() {
+    if (sessionToken) return sessionToken;
+    if (!authToken || !role) return null;
+
     try {
-        const existingToken = localStorage.getItem('auth_token');
-        if (existingToken) return existingToken;
-        const anonomousEmail = 'anonomous_' + Math.random().toString(36).substr(2,9) + '@unjobless.local';
-        const res = await fetch('/auth/signup', {
+        const res = await apiFetch('/session/start', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email: anonomousEmail, password: 'anonomous', role: ''})
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({ role })
         });
-        if (res.ok) {
-            const data = await res.json();
-            localStorage.setItem('auth_token', data.token);
-            return data.token;
-        }
-        return null;
-    } catch {
+        const data = await res.json();
+        sessionToken = data.session_token;
+        localStorage.setItem('session_token', sessionToken);
+        return sessionToken;
+    } catch (e) {
+        console.error('could not start session', e);
+        sessionToken = null;
         return null;
     }
 }
 
 async function init() {
-    try {
-        authToken = await initAuth();
-        const params = new URLSearchParams(window.location.search);
-        role = params.get('role');
+    const params = new URLSearchParams(window.location.search);
+    role = params.get('role');
 
-        if (!role) {
-            alert('Role not given. Please provide a role in the URL query parameters.');
-            return;
-        }
-
-
-        await syncProgress();
-        updateProgressUI();
-
-        await ensureSession();
-        await loadQuestion();
-        }  catch (e) {
-            console.error('Init Failed', e);
-            await loadQuestion();
+    if (!role) {
+        alert('No role given. Head back and pick one.');
+        window.location.href = 'index.html';
+        return;
     }
 
+    $('role-title').textContent = role.toUpperCase();
+    $('role-subtitle').textContent = '// ' + role + ' INTERVIEW //';
 
-    document.getElementById('user-answer').addEventListener('keydown', (e) => {
+    const answerEl = $('user-answer');
+
+    answerEl.addEventListener('input', updateWordCount);
+    answerEl.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
-            if (!isSubmitting) {
-                submitAnswer();
-            }
+            submitAnswer();
         }
     });
 
-    document.getElementById('role-title').textContent = role.toUpperCase();
-    document.getElementById('role-subtitle').textContent = '// ' + role + ' Interview //';
-
-    document.getElementById('user-answer').addEventListener('input', () => {
-        const text = document.getElementById('user-answer').value.trim();
-        const count = text === '' ? 0 : text.split(/\s+/).length;
-        const el = document.getElementById('word-count');
-        el.textContent = count;
-        el.parentElement.className = 'word-count ' + (count >= 50 ? 'good' : '');
-    });
+    authToken = await initAuth();
+    await syncProgress();
+    await ensureSession();
+    await loadQuestion();
 }
 
+function updateWordCount() {
+    const text = $('user-answer').value.trim();
+    const count = text === '' ? 0 : text.split(/\s+/).length;
+    $('word-count').textContent = count;
+    $('word-count-label').classList.toggle('good', count >= 50);
+}
 
 function updateProgressUI() {
-    // stating constants
-    const progressText = document.getElementById('progress-text');
-    const progressFill = document.getElementById('progress-fill');
-    const qCounter = document.getElementById('q-counter');
-    const qCounterFooter = document.getElementById('q-count');
-
-    if (progressFill && progressText) {
-        const current = questionsAnswered + 1;
-        progressText.textContent = `Q${current}`;
-        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
-        progressFill.style.width = pct + '%';
+    const current = questionsAnswered + 1;
+    const fill = $('progress-fill');
+    if (fill) {
+        fill.style.width = Math.min((current / SESSION_LENGTH) * 100, 100) + '%';
     }
-    if (qCounter) qCounter.textContent = 'Q' + (questionsAnswered + 1);
-    if (qCounterFooter) qCounterFooter.textContent = questionsAnswered;
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init(); 
-}
-
-window.addEventListener('beforeunload', () => {
-    stopTimer();
-    if (submitAbortControl) {
-        submitAbortControl.abort();
-    }
-});
-
-async function ensureSession() {
-    if (sessionToken) return;
-    try {
-        const res = await fetchAPI('/session/start', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorisation': 'Bearer ' + authToken
-            },
-            body: JSON.stringify({role})
-        });
-        const data = await res.json();
-        sessionToken = data.session_token;
-        localStorage.setItem('session_token', sessionToken); // store for stats page
-    } catch (e) {
-        sessionToken = null;
-    }
-}
-
-
-async function loadQuestion() {
-    if (!role) return;
-
-    timerHidden = false;
-    const timerBox = document.getElementById('timer-box');
-    const hideBtn = document.getElementById('hide-timer-btn');
-    if (timerBox) timerBox.classList.remove('timer-hidden');
-    if (hideBtn) {
-        hideBtn.textContent = 'HIDE TIMER';
-        hideBtn.onclick = hideTimer;
-    }
-
-    const display = document.getElementById('question-display');
-    if (!display) return;
-    display.innerHTML = 'LOADING....<span class="cursor">_</span>';
-
-    let data = null;
-
-    if (sessionToken) {
-        try {
-            const res = await fetchAPI('/session/question', {
-                headers: {'Authorisation': 'Bearer ' + sessionToken}
-            });
-            data = await res.json();
-        } catch (e) {
-            sessionToken = null;
-        }
-    }
-
-    if (!data) {
-        try {
-            const res = await fetchAPI('/question?role=' + encodeURIComponent(role));
-            data = await res.json();
-            legacyRetries = 0;
-        } catch (e) {
-            legacyRetries++;
-            if (legacyRetries >= 5) {
-                display.innerHTML = 'Unable to load question. <button class="retry-btn" onclick="loadQuestion()">Retry</button>';
-                return;
-            }
-            display.innerHTML = 'LOADING....<span class="cursor">_</span>';
-            setTimeout(loadQuestion, 800);
-            return;
-        }
-    }
-
-    display.innerHTML = '> ' + data.question + '<span class="cursor">_</span>';
-    document.getElementById('q-counter').textContent = 'Q' + (questionsAnswered + 1);
-
-    const progressText = document.getElementById('progress-text');
-    const progressFill = document.getElementById('progress-fill');
-    if (progressText && progressFill) {
-        const current = questionsAnswered + 1;
-        progressText.textContent = `Q${current}`;
-        const pct = Math.min((current / SESSION_LENGTH) * 100, 100);
-        progressFill.style.width = pct + '%';
-    }
-    startTimer();
-    const badge = document.getElementById('difficulty-lvl');
-
-    if (badge && data.difficulty) {
-        badge.textContent = data.difficulty.toUpperCase();
-        badge.className = data.difficulty;
-    }
+    $('q-counter').textContent = 'Q' + current;
+    $('q-count').textContent = questionsAnswered;
+    $('score').textContent = score;
 }
 
 async function syncProgress() {
-    // check how many questions user has answered in total
+    if (!authToken) return;
     try {
-        const headers = {'Authorisation': 'Bearer ' + authToken};
+        const headers = { 'Authorization': 'Bearer ' + authToken };
         if (sessionToken) headers['X-Session-Token'] = sessionToken;
-        const res = await fetch('/stats/unlock-status', { headers });
-        if (res.ok) {
-            const data = await res.json();
-            questionsAnswered = data.answered || 0;
-            // backup in localStorage for stats page fallback
-            localStorage.setItem('answered_count', questionsAnswered);
-            updateProgressUI();
-        }
+
+        const res = await apiFetch('/stats/unlock-status', { headers });
+        const data = await res.json();
+        questionsAnswered = data.answered || 0;
+        localStorage.setItem('answered_count', questionsAnswered);
     } catch (e) {
-        questionsAnswered = 0;
+        // not worth blocking the page over, we just keep the local count
+        console.warn('progress sync failed', e.message);
     }
-    
+    updateProgressUI();
 }
 
 
-async function startTimer() {
-    if (timerHidden) return;
-    if (timerInterval) clearInterval(timerInterval);
-    timeRemaining = timer_sec;
-    updateDisplay();
+// --- questions ---------------------------------------------------------
 
-    timerInterval = setInterval(() =>{
-        timeRemaining--;
-        updateDisplay();
+// nextQuestion and skipQuestion used to be the same function copy-pasted twice,
+// so they're folded in here. actionType is 'initial' | 'next' | 'skip' | 'retry'
+// and only decides how much of the UI we wipe before fetching.
+async function loadQuestion(actionType = 'initial') {
+    if (!role) return;
 
-        if (timeRemaining <= 0 ) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-            handleTime();
+    if (actionType === 'next' || actionType === 'skip') {
+        stopTimer();
+        if (submitAbortControl) {
+            submitAbortControl.abort();
+            submitAbortControl = null;
         }
-    }, 1000);
+        resetAnswerUI();
+    }
+
+    const display = $('question-display');
+    display.innerHTML = 'LOADING....<span class="cursor">_</span>';
+
+    resetTimerUI();
+
+    if (!(await ensureSession())) {
+        display.innerHTML = 'Could not start a session. <button class="retry-btn" onclick="loadQuestion(\'retry\')">RETRY</button>';
+        return;
+    }
+
+    try {
+        const res = await apiFetch('/session/question', {
+            headers: { 'Authorization': 'Bearer ' + sessionToken }
+        });
+        const data = await res.json();
+
+        display.innerHTML = '&gt; ' + escapeHtml(data.question) + '<span class="cursor">_</span>';
+
+        const badge = $('difficulty-lvl');
+        if (data.difficulty) {
+            badge.textContent = data.difficulty.toUpperCase();
+            badge.className = data.difficulty;
+        }
+
+        updateProgressUI();
+        startTimer();
+    } catch (e) {
+        // most likely the session expired, so drop it and let retry rebuild one
+        if (e.status === 401) sessionToken = null;
+        display.innerHTML = 'Unable to load question. <button class="retry-btn" onclick="loadQuestion(\'retry\')">RETRY</button>';
+    }
 }
 
-function hideTimer() {
-    timerHidden = true;
-    stopTimer();
-    document.getElementById('timer-box').classList.add('timer-hidden');
-    const btn = document.getElementById('hide-timer-btn');
-    btn.textContent = 'SHOW TIMER';
-    btn.onclick = showTimer;
+// the HTML binds these via onclick, so keep them as thin named wrappers
+function nextQuestion() {
+    return loadQuestion('next');
 }
 
-function showTimer() {
+function skipQuestion() {
+    return loadQuestion('skip');
+}
+
+function resetAnswerUI() {
+    $('user-answer').value = '';
+    updateWordCount();
+
+    $('feedback-box').classList.add('hidden');
+    $('feedback-text').textContent = '';
+    $('feedback-breakdown').textContent = '';
+    $('score-display').textContent = '';
+
+    const submitBtn = $('submit-btn');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'SUBMIT YOUR ANSWER';
+
+    const improveBtn = $('improve-btn');
+    improveBtn.disabled = false;
+    improveBtn.textContent = 'AI IMPROVE MY ANSWER';
+    improveBtn.classList.add('hidden');
+}
+
+
+// --- timer -------------------------------------------------------------
+
+function resetTimerUI() {
     timerHidden = false;
-    document.getElementById('timer-box').classList.remove('timer-hidden');
-    const btn = document.getElementById('hide-timer-btn');
+    $('timer-box').classList.remove('timer-hidden');
+    const btn = $('hide-timer-btn');
     btn.textContent = 'HIDE TIMER';
     btn.onclick = hideTimer;
-    startTimer(); 
+}
+
+function startTimer() {
+    stopTimer();
+    if (timerHidden) return;
+
+    timeRemaining = QUESTION_SECONDS;
+    updateTimerDisplay();
+
+    timerInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) {
+            stopTimer();
+            handleTimeUp();
+        }
+    }, 1000);
 }
 
 function stopTimer() {
@@ -280,348 +263,272 @@ function stopTimer() {
     }
 }
 
-function updateDisplay() {
-    const timerEl = document.getElementById('timer-display');
-    const timerFillEl = document.getElementById('timer-fill');
-    if (!timerEl || !timerFillEl) return;
+function hideTimer() {
+    timerHidden = true;
+    stopTimer();
+    $('timer-box').classList.add('timer-hidden');
+    const btn = $('hide-timer-btn');
+    btn.textContent = 'SHOW TIMER';
+    btn.onclick = showTimer;
+}
+
+function showTimer() {
+    timerHidden = false;
+    $('timer-box').classList.remove('timer-hidden');
+    const btn = $('hide-timer-btn');
+    btn.textContent = 'HIDE TIMER';
+    btn.onclick = hideTimer;
+    startTimer();
+}
+
+function updateTimerDisplay() {
+    const timerEl = $('timer-display');
+    const fillEl = $('timer-fill');
+    if (!timerEl || !fillEl) return;
 
     const mins = Math.floor(timeRemaining / 60);
-    const sec = timeRemaining % 60;
-    timerEl.textContent = `${mins}:${sec.toString().padStart(2,'0')}`;
+    const secs = timeRemaining % 60;
+    timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    fillEl.style.width = Math.max((timeRemaining / QUESTION_SECONDS) * 100, 0) + '%';
 
-    const pct = (timeRemaining/timer_sec) * 100;
-    timerFillEl.style.width = pct + '%';
+    timerEl.classList.remove('warning', 'critical');
+    fillEl.classList.remove('warning', 'critical');
 
-    timerEl.classList.remove('warning','critical');
-    timerFillEl.classList.remove('warning','critical');
-
-    
     if (timeRemaining <= 10) {
         timerEl.classList.add('critical');
-        timerFillEl.classList.add('critical');
+        fillEl.classList.add('critical');
     } else if (timeRemaining <= 30) {
         timerEl.classList.add('warning');
-        timerFillEl.classList.add('warning');
+        fillEl.classList.add('warning');
     }
 }
 
-function handleTime () {
-    if (isSubmitting) {
-        console.log('Manual submit in progress, skipping auto-submit');
-        return;
-    }
-    const answer = document.getElementById('user-answer').value.trim();
+function handleTimeUp() {
+    if (isSubmitting) return;
+
+    stopTimer();  // stop first so interval won't fire submitAgain
+    const answer = $('user-answer').value.trim();
     if (answer.length >= 20) {
         submitAnswer();
     } else {
-        alert('times up lil bro')
+        alert("Time's up on this one. Moving on.");
         nextQuestion();
     }
 }
 
 
+// --- submit ------------------------------------------------------------
+
 async function submitAnswer() {
-    if (isSubmitting) {
-        console.log('Submit already in progress, ignoring');
-        return;
-    }
-    isSubmitting = true;
+    // every guard runs BEFORE the lock goes up, otherwise an early return
+    // leaves isSubmitting stuck true and the page never accepts input again
+    if (isSubmitting) return;
     if (!role) {
-        alert('Role not specified. Please reload the page with a valid role.');
+        alert('No role set. Reload the page with a valid role.');
         return;
     }
 
-    const answer = document.getElementById('user-answer').value.trim();
-
+    const answer = $('user-answer').value.trim();
     if (answer.length < 20) {
-        alert('stop being deadass fam and write fr gng');
+        alert('That is too short to grade. Write a real answer first.');
         return;
     }
 
+    isSubmitting = true;
     stopTimer();
+
     submitAbortControl = new AbortController();
     const signal = submitAbortControl.signal;
 
-    const btn = document.getElementById('submit-btn');
+    const btn = $('submit-btn');
     btn.disabled = true;
-    btn.textContent = '...gradin ts...';
+    btn.textContent = 'GRADING...';
 
-    const feedbackBox = document.getElementById('feedback-box');
-    const feedbackText = document.getElementById('feedback-text');
-    const breakdownText = document.getElementById('feedback-breakdown');
+    const feedbackBox = $('feedback-box');
+    const feedbackText = $('feedback-text');
+    const breakdownText = $('feedback-breakdown');
 
     feedbackBox.classList.remove('hidden');
     feedbackText.classList.add('loading');
-    feedbackText.textContent = "gradin ts...";
+    feedbackText.textContent = 'Grading your answer...';
     breakdownText.textContent = '';
-    document.getElementById('score-display').textContent = '';
-    document.getElementById('next-btn').style.display = 'none';
+    $('score-display').textContent = '';
+    $('next-btn').classList.add('hidden');
+    feedbackBox.scrollIntoView({ behavior: 'smooth' });
 
-    feedbackBox.scrollIntoView({behavior: 'smooth'});
-
-    // DEBUG: log what we're sending
-    console.log('Submitting answer:', answer.substring(0, 50));
-
-    let lastErr = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-            await ensureSession();
-            const endpoint = sessionToken ? '/session/submit' : '/submit';
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorisation': 'Bearer ' + (sessionToken || authToken)
-            };
-            const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
-
-
-            const res = await fetchAPI(endpoint, {
-                method: 'POST',
-                headers,
-                body,
-                signal
-            });
-
-            if (signal.aborted) {
-                console.log('Submit aborted');
-                return;
-            }
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `grading failed (${res.status})`);
-            }
-            const data = await res.json();
-
-            feedbackText.classList.remove('loading');
-            feedbackText.textContent = data.feedback;
-            breakdownText.textContent = data.breakdown;
-            
-            await syncProgress();
-            // Ensure progress UI updates with latest count
-            updateProgressUI();
-
-            // Debug: check if syncProgress actually updated the count
-            console.log('After syncProgress, questionsAnswered =', questionsAnswered);
-
-            // Fallback: if syncProgress failed or returned 0, but we just submitted so we know we answered at least 1
-            const totalAnswered = questionsAnswered || 1;
-            
-            if (totalAnswered >= 1) {
-                // Check if button already exists to avoid duplicates
-                if (!document.getElementById('unblock-stats-btn')) {
-                    const footer = document.querySelector('.footer');
-                    if (footer) {
-                        const statBtn = document.createElement('button');
-                        statBtn.id = 'unblock-stats-btn';
-                        statBtn.textContent = 'VIEW PROGRESS ->';
-                        statBtn.className = 'export-btn';
-                        statBtn.onclick = async function() {
-                            if (sessionToken) {
-                                await fetch('/session/end', {
-                                    method: 'POST',
-                                    headers: {'Authorisation': 'Bearer ' + sessionToken}
-                                });
-                            }
-                            location.href = 'stats.html';
-                        };
-                        footer.appendChild(statBtn);
-                    } else {
-                        console.warn('Footer not found, cannot append progress button');
-                    }
-                }
-            }
-            
-            document.getElementById('score').textContent = score;
-            document.getElementById('q-count').textContent = questionsAnswered;
-            document.getElementById('score-display').textContent = `${data.points}/${data.max_points} PTS`;
-
-            document.getElementById('next-btn').style.display = 'block';
-            document.getElementById('improve-btn').style.display = 'block';
-            return;
-
-        } catch (err) {
-            lastErr = err;
-            if (err.name === 'AbortError' || signal.aborted) {
-                console.log('Submit aborted');
-                return;
-            }
-            if (err.message?.includes('401') || err.message?.includes('403')) {
-                sessionToken = null;
-            }
-            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    try {
+        if (!(await ensureSession())) {
+            throw new Error('Could not start a session.');
         }
-    }
 
-    console.error('Submit failed after retries:', lastErr);
-    feedbackText.classList.remove('loading');
-    feedbackText.textContent = 'Something went wrong. Your answer was saved locally.';
+        const res = await apiFetch('/session/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + sessionToken
+            },
+            body: JSON.stringify({ answer }),
+            signal
+        });
+        const data = await res.json();
 
-    if (!signal.aborted) {
+        feedbackText.classList.remove('loading');
+        feedbackText.textContent = data.feedback;
+        breakdownText.textContent = data.breakdown;
+        $('score-display').textContent = `${data.points}/${data.max_points} PTS`;
+
+        score += data.points;
+        questionsAnswered += 1;
+        await syncProgress();
+
+        $('next-btn').classList.remove('hidden');
+        $('improve-btn').classList.remove('hidden');
+        addStatsButton();
+    } catch (err) {
+        if (err.name === 'AbortError') {
+            // user hit next/skip mid-request, nothing to report
+            feedbackBox.classList.add('hidden');
+        } else {
+            if (err.status === 401 || err.status === 403) sessionToken = null;
+            console.error('submit failed', err);
+            feedbackText.classList.remove('loading');
+            feedbackText.textContent = 'Grading failed: ' + err.message;
+            breakdownText.innerHTML = '<button class="retry-btn" onclick="submitAnswer()">TRY AGAIN</button>';
+        }
+    } finally {
+        // this is the whole point - the UI unlocks no matter how we got here
+        isSubmitting = false;
+        submitAbortControl = null;
         btn.disabled = false;
-        btn.textContent = 'SUBMIT ANSWER';  // Fixed, it wwas "GOOD LUCK MAY THO PASS"
+        btn.textContent = 'SUBMIT YOUR ANSWER';
     }
-
-    isSubmitting = false;
-    submitAbortControl = null;
 }
 
-async function nextQuestion() {
-    if (submitAbortControl) {
-        submitAbortControl.abort();
-        submitAbortControl = null;
-    } 
-    isSubmitting = false;
+function addStatsButton() {
+    if ($('unblock-stats-btn')) return;
 
-    document.getElementById('user-answer').value = '';
-    document.getElementById('word-count').textContent = '0'; 
-    document.getElementById('word-count-label').className = '';
+    const footer = document.querySelector('.footer');
+    if (!footer) return;
 
-    const feedbackBox = document.getElementById('feedback-box');
-    feedbackBox.classList.add('hidden');
-
-    // Reset submit button state for new question
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = false;
-    btn.textContent = 'SUBMIT ANSWER';
-
-    const improveBtn = document.getElementById('improve-btn');
-    improveBtn.disabled = false;
-    improveBtn.textContent = 'AI IMPROVE MY ANSWER';
-    improveBtn.classList.add('hidden');
-
-    await loadQuestion();
+    const statBtn = document.createElement('button');
+    statBtn.id = 'unblock-stats-btn';
+    statBtn.textContent = 'VIEW PROGRESS ->';
+    statBtn.onclick = async () => {
+        if (sessionToken) {
+            try {
+                await fetch('/session/end', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
+                });
+            } catch (e) {
+                console.warn('session end failed', e);
+            }
+        }
+        window.location.href = 'stats.html';
+    };
+    footer.appendChild(statBtn);
 }
 
-async function skipQuestion() {
-    stopTimer();
 
-    if (submitAbortControl) {
-        submitAbortControl.abort();
-        submitAbortControl = null;
-    }
-    isSubmitting = false;
-
-    document.getElementById('user-answer').value = '';
-    document.getElementById('word-count').textContent = '0';
-    document.getElementById('word-count-label').className = '';
-
-    const feedbackBox = document.getElementById('feedback-box');
-    feedbackBox.classList.add('hidden');
-
-    // Reset submit & improve button state for new question
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = false;
-    btn.textContent = 'SUBMIT ANSWER';
-
-    const improveBtn = document.getElementById('improve-btn');
-    improveBtn.disabled = false;
-    improveBtn.textContent = 'AI IMPROVE MY ANSWER';
-    improveBtn.classList.add('hidden');
-
-    await loadQuestion();
-}
+// --- AI improve --------------------------------------------------------
 
 async function improveAnswer() {
+    if (isImproving) return;
     if (!role) {
-        alert('Role not specified. Please reload the page.');
+        alert('No role set. Reload the page.');
         return;
     }
 
-    const answer = document.getElementById('user-answer').value.trim();
+    const answer = $('user-answer').value.trim();
     if (answer.length < 20) {
-        alert('write more first dawg');
+        alert('Write a bit more before asking for an improvement.');
         return;
     }
 
-    const btn = document.getElementById('improve-btn');
+    isImproving = true;
+    const btn = $('improve-btn');
     btn.disabled = true;
-    btn.textContent = '...improving...';
+    btn.textContent = 'IMPROVING...';
 
-    let lastErr = null;
-    // AI correction is fun but expensive asf, so we retry a couple times ONLY
-    for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-            await ensureSession();
-            const endpoint = sessionToken ? '/correct' : '/correct';
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorisation': 'Bearer ' + (sessionToken || authToken)
-            };
-            const body = sessionToken ? JSON.stringify({answer}) : JSON.stringify({answer, role});
-
-            const res = await fetchAPI(endpoint, {
-                method: 'POST',
-                headers,
-                body
-            });
-
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.error || `improvement failed (${res.status})`);
-            }
-            const data = await res.json();
-
-            currentImproved = data.improved;
-            currentChanges = data.changes;
-            showCorrection(data.explanation, data.changes);
-            return;
-
-        } catch (err) {
-            lastErr = err;
-            if (err.message?.includes('401') || err.message?.includes('403')) {
-                sessionToken = null;
-            }
-            await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+    try {
+        if (!(await ensureSession())) {
+            throw new Error('Could not start a session.');
         }
+
+        const res = await apiFetch('/session/correct', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + sessionToken
+            },
+            body: JSON.stringify({ answer })
+        });
+        const data = await res.json();
+
+        currentImproved = data.improved;
+        currentChanges = data.changes || [];
+        showCorrection(data.explanation, currentChanges);
+    } catch (err) {
+        if (err.status === 401 || err.status === 403) sessionToken = null;
+        console.error('improve failed', err);
+        alert('AI improvement is unavailable right now.');
+    } finally {
+        isImproving = false;
+        btn.disabled = false;
+        btn.textContent = 'AI IMPROVE MY ANSWER';
     }
-
-    console.error('AI correction failed after retries:', lastErr);
-    alert('AI correction unavailable right now.');
-
-    btn.disabled = false;
-    btn.textContent = 'AI IMPROVE MY ANSWER';
 }
 
 function showCorrection(explanation, changes) {
-    const modal = document.getElementById('correction-modal');
-    const expEl = document.getElementById('correction-explanation');
-    const diffEl = document.getElementById('correction-diff');
+    $('correction-explanation').innerHTML =
+        `<p class="correction-explanation">${escapeHtml(explanation)}</p>`;
 
-    expEl.innerHTML = `<p class="correction-explanation">${explanation}</p>`;
-
-    let diffHtml = '<div class="diff-container">';
+    const parts = ['<div class="diff-container">'];
     changes.forEach(c => {
-        const cls = c.type === 'add' ? 'diff-add' : (c.type === 'remove' ? 'diff-remove' : 'diff-replace');
-        diffHtml += `<div class="diff-line ${cls}">`;
-        if (c.original) diffHtml += `<span class="diff-original">${escapeHtml(c.original)}</span>`;
-        if (c.improved) diffHtml += `<span class="diff-improved">${escapeHtml(c.improved)}</span>`;
-        diffHtml += `<span class="diff-reason">${escapeHtml(c.reason)}</span></div>`;
+        const cls = c.type === 'add' ? 'diff-add'
+            : c.type === 'remove' ? 'diff-remove'
+            : 'diff-replace';
+
+        parts.push(`<div class="diff-line ${cls}">`);
+        if (c.original) parts.push(`<span class="diff-original">${escapeHtml(c.original)}</span>`);
+        if (c.improved) parts.push(`<span class="diff-improved">${escapeHtml(c.improved)}</span>`);
+        parts.push(`<span class="diff-reason">${escapeHtml(c.reason || '')}</span></div>`);
     });
-    diffHtml += '</div>';
-    diffEl.innerHTML = diffHtml;
+    parts.push('</div>');
 
-    modal.classList.remove('hidden');
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    $('correction-diff').innerHTML = parts.join('');
+    $('correction-modal').classList.remove('hidden');
 }
 
 function applyCorrection() {
-    document.getElementById('user-answer').value = currentImproved;
-    document.getElementById('user-answer').dispatchEvent(new Event('input'));
+    const answerEl = $('user-answer');
+    answerEl.value = currentImproved;
+    updateWordCount();
     closeCorrection();
 }
 
 function closeCorrection() {
-    document.getElementById('correction-modal').classList.add('hidden');
+    $('correction-modal').classList.add('hidden');
     currentImproved = '';
     currentChanges = [];
-
-    // Reset submit button state
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = false;
-    btn.textContent = 'SUBMIT ANSWER';
 }
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text == null ? '' : text;
+    return div.innerHTML;
+}
+
+
+// --- boot --------------------------------------------------------------
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+window.addEventListener('beforeunload', () => {
+    stopTimer();
+    if (submitAbortControl) submitAbortControl.abort();
+});

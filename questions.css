@@ -1,330 +1,189 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 
-/* Universal reset */
-* {margin: 0; padding: 0; box-sizing: border-box}
+/* Space Mono does all the actual reading work.
+   Press Start 2P is display only - it's unreadable below ~1rem. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     background: #fafafa;
     color: #1a1a1a;
-    font-family: 'VT323', monospace;
-    font-size: 22px;
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    line-height: 1.6;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 60px 20px 80px;
-    gap: 40px;
+    gap: 32px;
 }
 
+/* --- header --- */
 .header {
     text-align: center;
-    margin-bottom: 20px;
     width: 100%;
-    max-width: 800px;
-}
-
-.header, .box, #feedback-box, .footer {
     max-width: 900px;
+    margin-bottom: 10px;
 }
 
-.box {
-    padding: 40px 40px;
-    margin-bottom: 30px;
-}
-
-.box-label.goood {
-    color: #2b7c2f;
-}
-
+/* the one place Press Start 2P earns its keep */
 .header h1 {
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(1rem,3vw,1.6rem);
+    font-size: clamp(1rem, 3vw, 1.6rem);
     letter-spacing: 5px;
-    text-shadow: 4px 4px 0 #ccc;
-    margin-bottom: 8px;
+    text-shadow: 4px 4px 0 #ddd;
+    line-height: 1.6;
+    margin: 12px 0 10px;
 }
 
 .header p {
+    font-size: 0.95rem;
     color: #666;
-    letter-spacing: 3px;
-    margin-bottom: 12px;
+    letter-spacing: 2px;
 }
 
 .back {
-    color: #999;
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #888;
     text-decoration: none;
-    font-size: 0.9rem;
     letter-spacing: 2px;
 }
 
-.back:hover {color: #1a1a1a;}
+.back:hover { color: #1a1a1a; }
 
-.dialog-box, #feedback-box {
+/* --- boxes --- */
+.box, #feedback-box {
     width: 100%;
-    max-width: 680px;
-    border: 4px solid #1a1a1a;
-    padding: 24px 28px;
-    margin-bottom: 18px;
-    background: #fff;
-}
-
-.dialog-box.hidden, #feedback-box.hidden {
-    display: none;
-}
-    
-.dialog-speaker {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.6rem;
-    color: #999;
-    letter-spacing: 3px;
-    margin-bottom: 12px;
-}
-
-
-.next-btn, #next-btn {
+    max-width: 900px;
     border: 3px solid #1a1a1a;
-    background: #1a1a1a;
-    color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.65rem;
-    padding: 12px 18px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    transition: background 0.08s, color 0.08s;
-}
-
-.next-btn:hover, #next-btn:hover {
     background: #fff;
-    color: #1a1a1a;
+    padding: 28px 30px;
 }
 
 .box-label {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.5rem;
-    line-height: 1.4;
-    letter-spacing: 0.05em;
-    font-weight: 400;
-    color: #333;
-    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #555;
+    margin-bottom: 16px;
 }
 
-#skip-btn {
-    width: 100%;
-    max-width: 600px;
-    border: 3px solid #ddd;
-    background: #fff;
-    color: #666;
-    font-family: 'Press Start 2P', monospace;
-    padding: 14px;
-    font-size: 0.6rem;
-    cursor: pointer;
-    letter-spacing: 3px;
-    margin-bottom: 18px;
-    transition: background 0.08s, color 0.08s, border-color 0.08s;
-}
+.box-label.good { color: #2b7c2f; }
 
-#skip-btn:hover {
-    border-color: #bbb;
-    color: #333;
-}
+.hidden { display: none; }
 
 #difficulty-lvl {
-    padding: 3px 8px;
-    border: 1px solid;
+    padding: 3px 10px;
+    border: 1px solid currentColor;
     font-size: 0.75rem;
     letter-spacing: 2px;
 }
-#difficulty-lvl.easy {
-    color: #2b7c2f;
-}
 
-#difficulty-lvl.medium {
-    color: #b88600
-}
+#difficulty-lvl.easy   { color: #2b7c2f; }
+#difficulty-lvl.medium { color: #b88600; }
+#difficulty-lvl.hard   { color: #c00; }
 
-#difficulty-lvl.hard {
-    color: #c00;
-}
+#word-count-label { color: #888; }
+#word-count-label.good { color: #2b7c2f; }
 
 #question-display {
-    font-size: 1.8rem;
-    line-height: 2.2;
-    font-weight: bold;
-    margin-bottom: 25px;
-    color: #333;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+    color: #1a1a1a;
     min-height: 80px;
-    letter-spacing: 2px;
+    margin-bottom: 24px;
 }
 
+/* --- answer input --- */
 textarea {
     width: 100%;
     background: #fff;
     border: 3px solid #1a1a1a;
     color: #1a1a1a;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    letter-spacing: 0px;
-    font-weight: 400;
-    padding: 20px;
-    resize: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    line-height: 1.7;
+    letter-spacing: 0.3px;
+    padding: 18px;
+    resize: vertical;
     outline: none;
-    letter-spacing: 1px;
-    line-height: 1.6;
-    margin-top: 10px;
+    margin-top: 6px;
 }
 
-textarea::placeholder {color: #999;}
-textarea:focus {border-color: #2b7c2f;}
+textarea::placeholder { color: #999; }
+textarea:focus { border-color: #2b7c2f; }
+
+/* --- buttons --- */
+button {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+}
 
 .start-btn, #submit-btn {
     width: 100%;
-    max-width:600px;
-    border: 4px solid #1a1a1a;
-    background: #1a1a1a;
-    color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.65rem;
-    padding: 18px;
-    cursor: pointer;
-    letter-spacing: 4px;
-    margin-bottom: 18px;
-    transition: background 0.08s, color 0.08s;
-}
-
-.start-btn:hover, #submit-btn:hover {background: #fff; color: #1a1a1a}
-.start-btn:disabled, #submit-btn:disabled {background: #eee; color:#999; border-color:#ddd; cursor: not-allowed;}
-
-#feedback-box.hidden {display: none;}
-
-#feedback-text {
-    font-family: 'Press Start 2P', cursive;
-    font-size: 1.1rem;
-    letter-spacing: 0px;
-    font-weight: 400;
-    line-height: 1.8;
-    color: #333;
-    margin-bottom: 12px;
-}
-
-#score-display {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.6rem;
-    color: #1a1a1a;
-    letter-spacing: 2px;
-    margin-bottom: 16px;
-}
-
-#feedback-box button {
+    max-width: 900px;
     border: 3px solid #1a1a1a;
     background: #1a1a1a;
     color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.6rem;
-    padding: 12px 18px;
+    font-size: 0.95rem;
+    padding: 16px;
     cursor: pointer;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     transition: background 0.08s, color 0.08s;
 }
 
-#feedback-box button:hover {background: #fff; color: #1a1a1a;}
-
-#feedback-text.loading {color:#999; font-style: italic;}
-
-.footer {
-    width: 100%;
-    max-width: 680px;
-    display: flex;
-    justify-content: space-between;
-    color: #333;
-    font-family: 'Press Start 2P', cursive;
-    font-size: 0.45rem;
-    line-height: 1.4;
-    letter-spacing: 0px;
-    font-weight: 400;
-    padding-top: 25px;
-    border-top: 2px solid #ddd;
-    letter-spacing: 2px;
-    margin-top: 50px;
+.start-btn:hover, #submit-btn:hover:not(:disabled) {
+    background: #fff;
+    color: #1a1a1a;
 }
 
-#timer-display {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 2rem;
-    color: #2b7c2f;
-    letter-spacing: 2px;
-    display: block;
-    margin-bottom: 12px;
-    text-align: center;
-}
-
-#timer-display.warning {
-    color: #b88600;
-}
-
-#timer-display.critical {
-    color: #c00;
-}
-
-.timer-track {
-    width: 100%;
-    height: 8px;
+.start-btn:disabled, #submit-btn:disabled {
     background: #eee;
-    border: 1px solid #ddd;
-    margin-top: 6px;
+    color: #999;
+    border-color: #ddd;
+    cursor: not-allowed;
 }
 
-.timer-fill {
-    height: 100%;
+#skip-btn {
     width: 100%;
-    background: #2b7c2f;
-    transition: width 1s linear, background 0.3s;
+    max-width: 900px;
+    border: 3px solid #ddd;
+    background: #fff;
+    color: #666;
+    font-size: 0.85rem;
+    padding: 13px;
+    cursor: pointer;
+    letter-spacing: 3px;
+    transition: background 0.08s, color 0.08s, border-color 0.08s;
 }
 
-.timer-fill.warning {
-    background: #b88600;
+#skip-btn:hover {
+    border-color: #bbb;
+    color: #1a1a1a;
 }
 
-.timer-fill.critical {
-    background: #c00;
-}
-
-.progress-track {
-    width: 100%;
-    height: 6px;
-    background: #eee;
-    border: 1px solid #ddd;
-    margin-top: 6px;
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    width: 0%;
-    background: #2b7c2f;
-    transition: width 0.5s ease;
-}
-
-
-
-.cursor {display: inline-block; animation: blink 1s step-end infinite;}
-@keyframes blink {0%,100%{opacity:1}  50%{opacity:0%}}
-
-/* Improve button */
 #improve-btn {
     width: 100%;
-    max-width: 600px;
+    max-width: 900px;
     border: 3px solid #2b7c2f;
     background: #2b7c2f;
     color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.6rem;
-    padding: 14px;
+    font-size: 0.85rem;
+    padding: 13px;
     cursor: pointer;
     letter-spacing: 2px;
-    margin-bottom: 18px;
-    transition: background 0.08s, color 0.08s, border-color 0.08s;
+    transition: background 0.08s, color 0.08s;
 }
 
 #improve-btn:hover:not(:disabled) {
@@ -335,16 +194,161 @@ textarea:focus {border-color: #2b7c2f;}
 #improve-btn:disabled {
     background: #ccc;
     border-color: #ccc;
-    color: #999;
+    color: #888;
     cursor: not-allowed;
 }
 
-#improve-btn.hidden { display: none; }
+.next-btn, #next-btn, #feedback-box button {
+    border: 3px solid #1a1a1a;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 12px 20px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: background 0.08s, color 0.08s;
+}
 
-/* Correction Modal */
+.next-btn:hover, #next-btn:hover, #feedback-box button:hover {
+    background: #fff;
+    color: #1a1a1a;
+}
+
+.retry-btn {
+    border: 3px solid #c00;
+    background: #fff;
+    color: #c00;
+    font-size: 0.8rem;
+    padding: 9px 16px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    margin-top: 12px;
+    transition: background 0.08s, color 0.08s;
+}
+
+.retry-btn:hover {
+    background: #c00;
+    color: #fff;
+}
+
+/* --- feedback --- */
+#feedback-text {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #1a1a1a;
+    margin-bottom: 14px;
+}
+
+#feedback-text.loading {
+    color: #888;
+    font-style: italic;
+}
+
+#feedback-breakdown {
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: #444;
+    white-space: pre-line;
+    margin-bottom: 18px;
+}
+
+#score-display {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 2px;
+}
+
+/* --- timer --- */
+#timer-display {
+    display: block;
+    text-align: center;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #2b7c2f;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+#timer-display.warning  { color: #b88600; }
+#timer-display.critical { color: #c00; }
+
+.timer-track {
+    width: 100%;
+    height: 8px;
+    background: #eee;
+    border: 1px solid #ddd;
+}
+
+.timer-fill {
+    height: 100%;
+    width: 100%;
+    background: #2b7c2f;
+    transition: width 1s linear, background 0.3s;
+}
+
+.timer-fill.warning  { background: #b88600; }
+.timer-fill.critical { background: #c00; }
+
+.hide-timer-btn {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 9px;
+    border: 2px solid #ddd;
+    background: #fff;
+    color: #666;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.hide-timer-btn:hover {
+    border-color: #c00;
+    color: #c00;
+}
+
+#timer-box.timer-hidden #timer-display,
+#timer-box.timer-hidden .timer-track {
+    display: none;
+}
+
+#timer-box.timer-hidden .hide-timer-btn {
+    border-color: #2b7c2f;
+    color: #2b7c2f;
+}
+
+#timer-box.timer-hidden .hide-timer-btn:hover {
+    background: #2b7c2f;
+    color: #fff;
+}
+
+/* --- progress --- */
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #2b7c2f;
+    transition: width 0.5s ease;
+}
+
+.cursor { display: inline-block; animation: blink 1s step-end infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* --- modal --- */
 #correction-modal {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -352,41 +356,21 @@ textarea:focus {border-color: #2b7c2f;}
     padding: 20px;
 }
 
-#correction-modal.hidden { display: none; }
-
-.hide-timer-btn {
-    display: block;
-    width: 100%;
-    margin-top: 7.5px;
-    padding: 7.5px;
-    border: 2.5px solid #ddd;
-    background-color: #fff;
-    color: #666;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 1rem;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: all 0.5s;
-}
-.hide-timer-btn:hover {
-    border-color: #c00;
-    color: #c00;
-}
 .modal-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(0, 0, 0, 0.7);
 }
 
 .modal-content {
     position: relative;
+    z-index: 1;
     background: #fff;
     border: 4px solid #1a1a1a;
-    max-width: 750px;
     width: 100%;
+    max-width: 750px;
     max-height: 85vh;
     overflow-y: auto;
-    z-index: 1;
 }
 
 .modal-header {
@@ -399,8 +383,7 @@ textarea:focus {border-color: #2b7c2f;}
 }
 
 .modal-header h3 {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.6rem;
+    font-size: 0.95rem;
     color: #2b7c2f;
     letter-spacing: 2px;
 }
@@ -409,73 +392,16 @@ textarea:focus {border-color: #2b7c2f;}
     background: none;
     border: none;
     font-size: 1.5rem;
+    color: #888;
     cursor: pointer;
-    color: #999;
 }
+
+.modal-close:hover { color: #1a1a1a; }
 
 .modal-body {
     padding: 20px;
     max-height: 60vh;
     overflow-y: auto;
-}
-
-.correction-explanation {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: #333;
-    line-height: 1.6;
-    margin-bottom: 16px;
-    padding: 12px;
-    background: #f0f0f0;
-    border: 2px solid #ddd;
-}
-
-.diff-container {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-    line-height: 1.8;
-}
-
-.diff-line {
-    padding: 8px 12px;
-    margin: 4px 0;
-    border-radius: 4px;
-}
-
-.diff-add {
-    background: #e8f5e9;
-    border-left: 4px solid #2b7c2f;
-}
-
-.diff-remove {
-    background: #fdecea;
-    border-left: 4px solid #c00;
-}
-
-.diff-replace {
-    background: #fff3e0;
-    border-left: 4px solid #b88600;
-}
-
-.diff-original {
-    color: #c00;
-    text-decoration: line-through;
-    display: block;
-    margin-bottom: 2px;
-}
-
-.diff-improved {
-    color: #2b7c2f;
-    font-weight: bold;
-    display: block;
-}
-
-.diff-reason {
-    color: #666;
-    font-size: 0.75rem;
-    font-style: italic;
-    display: block;
-    margin-top: 4px;
 }
 
 .modal-footer {
@@ -491,8 +417,7 @@ textarea:focus {border-color: #2b7c2f;}
     border: 3px solid #1a1a1a;
     background: #1a1a1a;
     color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.4rem;
+    font-size: 0.8rem;
     padding: 10px 16px;
     cursor: pointer;
     letter-spacing: 1px;
@@ -514,72 +439,91 @@ textarea:focus {border-color: #2b7c2f;}
     color: #fff;
 }
 
-#timer-box.timer-hidden #timer-display,
-#timer-box.timer-hidden .timer-track {
-    display: none;
+/* --- diff view --- */
+.correction-explanation {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #333;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f0f0f0;
+    border: 2px solid #ddd;
 }
 
-#timer-box.timer-hidden .hide-timer-btn {
-    border-color: #2b7c2f;
+.diff-container {
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.diff-line {
+    padding: 8px 12px;
+    margin: 6px 0;
+    border-radius: 4px;
+}
+
+.diff-add     { background: #e8f5e9; border-left: 4px solid #2b7c2f; }
+.diff-remove  { background: #fdecea; border-left: 4px solid #c00; }
+.diff-replace { background: #fff3e0; border-left: 4px solid #b88600; }
+
+.diff-original {
+    display: block;
+    color: #c00;
+    text-decoration: line-through;
+    margin-bottom: 2px;
+}
+
+.diff-improved {
+    display: block;
     color: #2b7c2f;
+    font-weight: 700;
 }
 
-#timer-box.timer-hidden .hide-timer-btn:hover {
-    background: #2b7c2f;
+.diff-reason {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: #666;
+}
+
+/* --- footer --- */
+.footer {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    color: #444;
+    padding-top: 24px;
+    border-top: 2px solid #ddd;
+    margin-top: 30px;
+}
+
+#unblock-stats-btn, .export-btn {
+    border: 3px solid #1a1a1a;
+    background: #1a1a1a;
     color: #fff;
+    font-size: 0.8rem;
+    padding: 12px 20px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    transition: background 0.08s, color 0.08s, transform 0.05s;
 }
 
 #unblock-stats-btn {
-    border: 4px solid #2b7c2f;
-    background-color: #2b7c2f;
-    color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.55rem;
-    padding: 14px 24px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    margin-left: auto;
-    margin-top: -10px;
-    transition: background 0.08s, color 0.08s, transform 0.05s;
-    white-space: nowrap;
-}
-
-.retry-btn {
-    border: 3px solid #c00;
-    background: #fff;
-    color: #c00;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.45rem;
-    padding: 10px 16px;
-    cursor: pointer;
-    letter-spacing: 2px;
-    margin-top: 12px;
-    transition: background 0.08s, color 0.08s, border-color 0.08s;
-}
-
-
-.retry-btn:hover {
-    background: #c00;
-    color: #fff;
+    border-color: #2b7c2f;
+    background: #2b7c2f;
 }
 
 #unblock-stats-btn:hover {
     background: #fff;
     color: #2b7c2f;
     transform: translateY(-1px);
-}
-
-.export-btn {
-    border: 4px solid #1a1a1a;
-    background: #1a1a1a;
-    color: #fff;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 0.55rem;
-    padding: 16px 24px;
-    cursor: pointer;
-    letter-spacing: 3px;
-    transition: background 0.08s, color 0.08s, transform 0.05s;
-    white-space: nowrap;
 }
 
 .export-btn:hover:not(:disabled) {
@@ -591,7 +535,7 @@ textarea:focus {border-color: #2b7c2f;}
 .export-btn:disabled {
     background: #ccc;
     border-color: #ccc;
-    color: #999;
+    color: #888;
     cursor: not-allowed;
     transform: none;
 }
@@ -605,7 +549,3 @@ textarea:focus {border-color: #2b7c2f;}
     background: #fff;
     color: #2b7c2f;
 }
-
-
-
-

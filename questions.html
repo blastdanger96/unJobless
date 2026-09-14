@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>unJobless - AI Interviewer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./questions.css">
     <script src="./questions.js" defer></script>
 </head>
@@ -14,26 +15,25 @@
 <body>
 
     <div class="header">
-        <a href="index.html" class="back"><- CHANGE ROLE</a>
-                <h1 id="role-title">unJobless</h1>
-                <p id="role-subtitle">// INTERVIEW MODE //</p>
-
+        <a href="index.html" class="back">&lt;- CHANGE ROLE</a>
+        <h1 id="role-title">unJobless</h1>
+        <p id="role-subtitle">// INTERVIEW MODE //</p>
     </div>
 
     <div class="box" id="question-box">
         <div class="box-label">
             <span>QUESTION</span>
             <span id="difficulty-lvl"></span>
-            <div id="progress-track" class="progress-track">
-                <div id="progress-fill" class="progress-fill"></div>
-            </div>
             <span id="q-counter">Q1</span>
+        </div>
+        <div id="progress-track" class="progress-track">
+            <div id="progress-fill" class="progress-fill"></div>
         </div>
         <div id="question-display">
             LOADING....<span class="cursor">_</span>
         </div>
         <div id="timer-box">
-            <span id="timer-display"> </span>
+            <span id="timer-display"></span>
             <div class="timer-track">
                 <div class="timer-fill" id="timer-fill"></div>
             </div>
@@ -45,15 +45,13 @@
         <div class="box-label">
             <span>YOUR ANSWER</span>
             <span id="word-count-label">
-                <span id="word-count">0</span>
+                <span id="word-count">0</span> WORDS
             </span>
         </div>
-        <textarea id="user-answer" rows="7"
-            placeholder="TYPE YOUR ANSWER HERE. BE SPECIFIC BY USING EXAMPLES AND MAKE SURE TO EXPLAIN YOUR REASONING.">
-        </textarea>
+        <textarea id="user-answer" rows="7" placeholder="Type your answer here. Be specific, use examples, and explain your reasoning."></textarea>
     </div>
 
-    <button id="submit-btn" onclick="submitAnswer()" aria-label="SUBMIT ANSWER"> SUBMIT YOUR ANSWER</button>
+    <button id="submit-btn" onclick="submitAnswer()" aria-label="SUBMIT ANSWER">SUBMIT YOUR ANSWER</button>
     <button id="skip-btn" onclick="skipQuestion()">SKIP THIS QUESTION</button>
     <button id="improve-btn" onclick="improveAnswer()" class="hidden">AI IMPROVE MY ANSWER</button>
 
@@ -64,12 +62,10 @@
         </div>
         <div id="rating-bar">
             <span id="rating-label"></span>
-
         </div>
         <div id="feedback-text"></div>
         <div id="feedback-breakdown"></div>
-        <button id="next-btn" onclick="nextQuestion()">NEXT QUESTION -></button>
-
+        <button id="next-btn" onclick="nextQuestion()">NEXT QUESTION -&gt;</button>
     </div>
 
     <div id="correction-modal" class="hidden">
@@ -91,8 +87,8 @@
     </div>
 
     <div class="footer">
-        <span>SCORE: <span id="score">0</span>PTS</span>
-        <span>ANSWERED: <span id="q-count"></span></span>
+        <span>SCORE: <span id="score">0</span> PTS</span>
+        <span>ANSWERED: <span id="q-count">0</span></span>
         <span>unJobless v1.0</span>
     </div>
 </body>

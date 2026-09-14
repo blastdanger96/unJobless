@@ -1,6 +1,10 @@
+/* Space Mono for everything readable, Press Start 2P for the hero only. */
+
 body {
     margin: 0;
-    font-family: 'VT323', monospace;
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    line-height: 1.6;
     background: #fafafa;
     color: #1a1a1a;
     min-height: 100vh;
@@ -20,11 +24,12 @@ body::before {
         to bottom,
         transparent 0px,
         transparent 3px,
-        rgba(0,0,0,0.03) 3px,
-        rgba(0,0,0,0.03) 4px
+        rgba(0, 0, 0, 0.03) 3px,
+        rgba(0, 0, 0, 0.03) 4px
     );
 }
 
+/* --- hero --- */
 .hero {
     max-width: 800px;
     text-align: center;
@@ -32,41 +37,51 @@ body::before {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
 }
 
 .hero-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #2b7c2f;
-    letter-spacing: 5px;
+    letter-spacing: 4px;
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.1s;
 }
 
+/* the only display header on this page */
 .hero h1 {
     font-family: 'Press Start 2P', monospace;
     font-size: clamp(1.5rem, 5vw, 2.5rem);
     letter-spacing: 5px;
-    text-shadow: 4px 4px 0 #ddd, 0 0 40px rgba(43,124,47,0.1);
+    line-height: 1.5;
+    text-shadow: 4px 4px 0 #ddd, 0 0 40px rgba(43, 124, 47, 0.1);
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.25s;
-    line-height: 1.5;
     cursor: default;
     transition: text-shadow 0.1s;
 }
+
 .hero h1:hover {
     animation: fadeUp 0s, glitch 0.5s ease;
 }
 
 .hero-tagline {
-    font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
+    font-weight: 700;
     color: #666;
-    letter-spacing: 5px;
-    min-height: 5rem;
+    letter-spacing: 4px;
+    min-height: 2.5rem;
     opacity: 0;
     animation: fadeUp 0.5s ease forwards 0.5s;
+}
+
+#typewriter-text {
+    display: inline-block;
+    font-size: 0.95rem;
+    color: #777;
+    letter-spacing: 1.5px;
+    min-height: 1.8rem;
 }
 
 .typewriter-cursor {
@@ -75,24 +90,16 @@ body::before {
     animation: blink 1s step-end infinite;
 }
 
-#typewriter-text {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.7rem;
-    color: #999;
-    letter-spacing: 2.5px;
-    min-height: 1.5rem;
-    display: inline-block;
-}
-
 .hero-cta {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.5rem;
+    font-size: 0.85rem;
     color: #444;
-    letter-spacing: 5px;
+    letter-spacing: 4px;
     animation: fadeUp 0.5s ease forwards 1s;
 }
 
+/* --- sections --- */
 .landing-section {
+    width: 100%;
     max-width: 800px;
     border-top: 1px solid #ddd;
     padding: 60px 20px;
@@ -102,27 +109,25 @@ body::before {
 }
 
 .section-label {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #2b7c2f;
-    letter-spacing: 4px;
+    letter-spacing: 3px;
 }
 
 .about-section h2 {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: clamp(0.5rem, 2vw, 1rem);
-    letter-spacing: 2.5px;
-    line-height: 2;
-    text-shadow: 2.5px 2.5px 0 #ddd;
+    font-size: clamp(1.05rem, 2.5vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    line-height: 1.6;
 }
 
 .about-section p {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.5rem;
-    color: #555;
-    line-height: 1.5;
-    letter-spacing: 1px;
-    max-width: 640px;
+    font-size: 1rem;
+    color: #444;
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+    max-width: 680px;
 }
 
 .steps {
@@ -134,36 +139,43 @@ body::before {
 .step {
     display: flex;
     gap: 25px;
-    align-items: flex-end;
+    align-items: flex-start;
     padding: 25px 0;
     border-bottom: 1px solid #e5e5e5;
 }
-.step:last-child {border-bottom:none;}
+
+.step:last-child { border-bottom: none; }
 
 .step-num {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 700;
     color: #2b7c2f;
-    letter-spacing: 2.5px;
-    min-width: 25px;
-    padding-top: 5px;
-}
-.step-body h3 {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.8rem;
-    letter-spacing: 2.5px;
-    margin-bottom: 10px;
-    line-height: 1.5;
-}
-.step-body p {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    color: #555;
-    letter-spacing: 1px;
-    line-height: 1.5;
+    letter-spacing: 2px;
+    min-width: 32px;
+    padding-top: 2px;
 }
 
+/* "PICK YOUR ROLE!" etc */
+.step-body h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+}
+
+/* "Chose from a wide range of roles..." etc */
+.step-body p {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.8;
+    letter-spacing: 0.3px;
+    margin: 0;
+}
+
+/* --- role picker --- */
 .role-section {
+    width: 100%;
     max-width: 800px;
     border-top: 1px solid #ddd;
     padding: 50px 25px 25px;
@@ -183,10 +195,10 @@ body::before {
 }
 
 .box-label {
-    font-family: 'Pixelify Sans', monospace;
-    font-size: 0.6rem;
-    color: #999;
-    letter-spacing: 3px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #666;
+    letter-spacing: 2px;
     margin-bottom: 20px;
     padding-bottom: 12px;
     border-bottom: 2px solid #ddd;
@@ -204,8 +216,9 @@ body::before {
     border: 3px solid #ddd;
     background: #fff;
     color: #1a1a1a;
-    font-family: 'Pixelify Sans';
-    font-weight: 400;
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
     padding: 18px 16px;
     cursor: pointer;
     letter-spacing: 0.5px;
@@ -217,9 +230,10 @@ body::before {
 }
 
 .role-btn span {
-    font-size: 0.8rem;
-    color: #999;
-    letter-spacing: 1px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #777;
+    letter-spacing: 0.5px;
 }
 
 .role-btn:hover {
@@ -228,14 +242,10 @@ body::before {
     border-color: #1a1a1a;
 }
 
-.role-btn:hover span {
-    color: #bbb;
-}
+.role-btn:hover span { color: #ccc; }
+.role-btn:active { transform: scale(0.98); }
 
-.role-btn:active {
-    transform: scale(0.98);
-}
-
+/* --- animation helpers --- */
 .reveal {
     opacity: 0;
     transform: translateY(7.5px);
@@ -248,37 +258,36 @@ body::before {
 }
 
 @keyframes fadeUp {
-    from {opacity: 0; transform: translateY(15px);}
-    to {opacity: 1; transform: translateY(0);}
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes glitch {
-    0% {text-shadow:  4px 4px 0 #ddd; transform: translate(0);}
-    20% {text-shadow: -3px 0 #2b7c2f, 3px 0 #fff; transform: translate(-2px, 0);}
-    40%{text-shadow: 3px 0 #2b7c2f, -3px 0 #fff; transform: translate(2px, 0);}
-    60% {text-shadow: -2px 0 #2b7c2f; transform: translate(-1px, 0);}
-    80% {text-shadow: 4px 4px #ddd; transform: translate(1px, 0);}
-    100% {text-shadow: 4px 4px 0 #ddd; transform: translate(0);}
+    0%   { text-shadow: 4px 4px 0 #ddd; transform: translate(0); }
+    20%  { text-shadow: -3px 0 #2b7c2f, 3px 0 #fff; transform: translate(-2px, 0); }
+    40%  { text-shadow: 3px 0 #2b7c2f, -3px 0 #fff; transform: translate(2px, 0); }
+    60%  { text-shadow: -2px 0 #2b7c2f; transform: translate(-1px, 0); }
+    80%  { text-shadow: 4px 4px #ddd; transform: translate(1px, 0); }
+    100% { text-shadow: 4px 4px 0 #ddd; transform: translate(0); }
 }
 
 @keyframes blink {
-    from, to {opacity: 1;}
-    50% {opacity: 0;}
+    from, to { opacity: 1; }
+    50% { opacity: 0; }
 }
 
+/* --- footer --- */
 .footer {
     width: 100%;
-    max-width: 680px;
+    max-width: 800px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    color: #333;
-    font-family: 'Pixelify Sans', cursive;
-    font-size: 0.45rem;
-    line-height: 1.4;
-    letter-spacing: 2px;
-    text-shadow: 3px 3px 0 #ddd;
-    font-weight: 400;
-    padding-top: 25px;
+    gap: 12px;
+    font-size: 0.8rem;
+    letter-spacing: 1.5px;
+    color: #444;
+    padding: 25px 20px 40px;
     border-top: 2px solid #ddd;
     margin-top: 50px;
 }

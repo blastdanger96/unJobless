@@ -1,26 +1,79 @@
+"""Claude-backed grading and answer correction.
+
+Everything in here degrades to the rule-based grader in grader.py rather than
+blowing up, so app.py only ever has to deal with one shape of response.
+"""
+
 import os
 import json
 import time
 import logging
+
 from dotenv import load_dotenv
 
+from grader import grade as rule_grade
+from cost_tracker import get_cost_tracker
+
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 AI_ENABLED = os.getenv("AI_ENABLED", "false").lower() == "true"
 AI_MODEL = os.getenv("AI_MODEL", "claude-3-5-sonnet-20241022")
 AI_TIMEOUT = int(os.getenv("AI_TIMEOUT", "30"))
+PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1.0")
 
-# simple circuit breaker so that if API fails 5 times, wait 60s
-fail_count = 0
-circuit_open_until = 0
-THRESHOLD = 5
-COOLDOWN = 60
-
-logger = logging.getLogger(__name__)
+MAX_TOKENS = 1024
+TEMPERATURE = 0.2
 
 
-# just keeping the prompt here
-SYSTEM_PROMPT = """You are an expert technical interviewer grading candidate answers.
+class CircuitBreaker:
+    """Stops us hammering (and paying for) an API that is clearly down.
+
+    After `threshold` failures it stays open for `cooldown` seconds, then
+    resets the counter and gives it another go.
+    """
+
+    def __init__(self, threshold=5, cooldown=60):
+        self.threshold = threshold
+        self.cooldown = cooldown
+        self.failures = 0
+        self.open_until = 0.0
+
+    @property
+    def is_open(self):
+        return self.open_until > time.time()
+
+    def allow(self):
+        if self.is_open:
+            return False
+        # cooldown has elapsed, so wipe the slate - this is what used to be
+        # missing and it left the breaker stuck open forever
+        if self.failures >= self.threshold:
+            self.failures = 0
+        return True
+
+    def record_success(self):
+        self.failures = 0
+        self.open_until = 0.0
+
+    def record_failure(self):
+        self.failures += 1
+        if self.failures >= self.threshold:
+            self.open_until = time.time() + self.cooldown
+            logger.warning(
+                "circuit opened after %d failures, cooling down %ds",
+                self.failures, self.cooldown,
+            )
+
+    def status(self):
+        return "open" if self.is_open else "closed"
+
+
+breaker = CircuitBreaker()
+
+
+GRADE_SYSTEM_PROMPT = """You are an expert technical interviewer grading candidate answers.
 Score 0-3 based on: accuracy, depth, structure, examples, communication.
 Return ONLY valid JSON: {"feedback": "string", "points": 0-3, "breakdown": "string"}
 
@@ -32,126 +85,6 @@ SCORING GUIDE:
 
 FEEDBACK STYLE: Direct, constructive, interviewer tone. Mention specific strengths/gaps.
 BREAKDOWN: Bullet points of what was covered vs missed."""
-
-
-def _mk_prompt(role, question, answer, meta):
-    keywords = meta.get("keywords", [])
-    concepts = meta.get("concepts", [])
-    mistakes = meta.get("common_mistakes", [])
-    ideal = meta.get("ideal_length", 80)
-
-    return (
-        f"""Role: {role}"
-Question: {question}"
-Target Length: {ideal} words"
-Core concepts: {concepts}"
-Important Keywords: {keywords}"
-Common mistakes: {mistakes}"
-Candidate answer: {answer}"""
-    )
-
-
-def _get_claude_client():
-    import anthropic
-    return anthropic.Anthropic(
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        timeout=AI_TIMEOUT
-    )
-
-
-def _clean_json(text):
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.splitlines()
-        if len(lines) >= 3 and lines[0].startswith("```"):
-            text = "\n".join(lines[1:-1])
-    return text.strip()
-
-
-def _get_text(resp):
-    for block in resp.content:
-        if hasattr(block, "text") and block.text:
-            return _clean_json(block.text)
-    return ""
-
-
-def _fallback_grade(role, question, answer, meta):
-    from app import grade as rule_grade
-    feedback, points, breakdown = rule_grade(role, answer, question)
-    return {
-        "feedback": feedback,
-        "points": points,
-        "breakdown": breakdown,
-        "_meta": {"fallback_reason": "rule_based"}
-    }
-
-
-def ai_grade(role, question, answer, meta):
-    global fail_count, circuit_open_until
-    start_time = time.time()
-
-    if not AI_ENABLED:
-        return _fallback_grade(role, question, answer, meta)
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        return _fallback_grade(role, question, answer, meta)
-
-    # if API keeps failing, just use fallback - no need to burn money
-    if circuit_open_until > time.time():
-        logger.warning("Circuit breaker open, falling back")
-        return _fallback_grade(role, question, answer, meta)
-    if fail_count >= THRESHOLD:
-        circuit_open_until = time.time() + COOLDOWN
-        logger.warning("Too many failures, circuit open for %ds", COOLDOWN)
-        return _fallback_grade(role, question, answer, meta)
-
-    try:
-        prompt = _mk_prompt(role, question, answer, meta)
-        client = _get_claude_client()
-
-        resp = client.messages.create(
-            model=AI_MODEL,
-            max_tokens=1024,
-            temperature=0.2,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        latency_ms = int((time.time() - start_time) * 1000)
-
-        content = _get_text(resp)
-        result = json.loads(content)
-
-        if not all(k in result for k in ("feedback", "points", "breakdown")):
-            return None
-        if not isinstance(result["points"], int) or not 0 <= result["points"] <= 3:
-            return None
-
-        fail_count = 0
-        circuit_open_until = 0
-
-        result["_meta"] = {
-            "tokens_in": resp.usage.input_tokens,
-            "tokens_out": resp.usage.output_tokens,
-            "latency_ms": latency_ms,
-            "model": AI_MODEL,
-            "prompt_version": os.getenv("PROMPT_VERSION", "v1.0"),
-            "fallback_reason": None,
-        }
-
-        logger.info(f"AI graded: role={role} points={result['points']} "
-                    f"tokens={resp.usage.input_tokens}/{resp.usage.output_tokens} latency={latency_ms}ms")
-
-        return result
-
-    except Exception as e:
-        latency_ms = int((time.time() - start_time) * 1000)
-        logger.error(f"AI grading failed: {e} (latency={latency_ms}ms)")
-        fail_count += 1
-        error_str = str(e).lower()
-        if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
-            logger.warning("Quota exceeded, falling back to rule-based grading")
-            return _fallback_grade(role, question, answer, meta)
-        return _fallback_grade(role, question, answer, meta)
 
 
 CORRECT_SYSTEM_PROMPT = """You are an expert technical interviewer improving candidate answers.
@@ -175,117 +108,220 @@ RULES:
 - changes array should have 3-8 items max"""
 
 
-def _mk_correct_prompt(role, question, answer, meta, feedback):
-    keywords = meta.get("keywords", [])
-    concepts = meta.get("concepts", [])
-    mistakes = meta.get("common_mistakes", [])
-    ideal = meta.get("ideal_length", 80)
+def _build_prompt(role, question, answer, meta, feedback=None):
+    """One builder for both prompts - the correction one just gets an extra line."""
+    parts = [
+        f"Role: {role}",
+        f"Question: {question}",
+        f"Target length: {meta.get('ideal_length', 80)} words",
+        f"Core concepts: {meta.get('concepts', [])}",
+        f"Important keywords: {meta.get('keywords', [])}",
+        f"Common mistakes: {meta.get('common_mistakes', [])}",
+        f"Candidate answer: {answer}",
+    ]
+    if feedback:
+        parts.append(f"Current feedback: {feedback}")
+    return "\n".join(parts)
 
-    return (
-        f"""Role: {role}"
-Question: {question}"
-Target Length: {ideal} words"
-Core concepts: {concepts}"
-Important Keywords: {keywords}"
-Common mistakes: {mistakes}"
-Candidate answer: {answer}"
-Current feedback: {feedback}"""
+
+def _client():
+    import anthropic
+    return anthropic.Anthropic(
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
+        timeout=AI_TIMEOUT,
     )
 
 
-def _fallback_correct(role, question, answer, meta, feedback):
+def _extract_json(resp):
+    """Pull the text out of the response and strip any ``` fencing."""
+    text = ""
+    for block in resp.content:
+        if getattr(block, "text", None):
+            text = block.text
+            break
+
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # drop the fence lines, keep the middle
+        text = "\n".join(lines[1:-1]) if len(lines) >= 3 else text.strip("`")
+
+    return json.loads(text.strip())
+
+
+def _can_call():
+    if not AI_ENABLED:
+        return False
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        logger.debug("no ANTHROPIC_API_KEY set, staying on the rule grader")
+        return False
+    if not breaker.allow():
+        logger.warning("circuit is open, using fallback")
+        return False
+    if get_cost_tracker().get_status()["over_daily"]:
+        logger.warning("daily spend limit hit, using fallback")
+        return False
+    return True
+
+
+def _invoke(system_prompt, user_prompt):
+    """Single API call. Returns (parsed_json, meta_dict). Raises on failure."""
+    started = time.time()
+    resp = _client().messages.create(
+        model=AI_MODEL,
+        max_tokens=MAX_TOKENS,
+        temperature=TEMPERATURE,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    latency_ms = int((time.time() - started) * 1000)
+
+    result = _extract_json(resp)
+
+    tokens_in = resp.usage.input_tokens
+    tokens_out = resp.usage.output_tokens
+    get_cost_tracker().record(AI_MODEL, tokens_in, tokens_out)
+
+    meta = {
+        "tokens_in": tokens_in,
+        "tokens_out": tokens_out,
+        "latency_ms": latency_ms,
+        "model": AI_MODEL,
+        "prompt_version": PROMPT_VERSION,
+        "fallback_reason": None,
+    }
+    return result, meta
+
+
+def _fallback_grade(role, question, answer, reason="rule_based"):
+    feedback, points, breakdown = rule_grade(role, answer, question)
+    return {
+        "feedback": feedback,
+        "points": points,
+        "breakdown": breakdown,
+        "_meta": {"fallback_reason": reason},
+    }
+
+
+def ai_grade(role, question, answer, meta):
+    if not _can_call():
+        return _fallback_grade(role, question, answer)
+
+    try:
+        result, call_meta = _invoke(
+            GRADE_SYSTEM_PROMPT,
+            _build_prompt(role, question, answer, meta),
+        )
+    except Exception as e:
+        breaker.record_failure()
+        logger.error("AI grading failed: %s", e)
+        return _fallback_grade(role, question, answer, reason="api_error")
+
+    # the model usually behaves but we're not trusting it blindly
+    if not all(k in result for k in ("feedback", "points", "breakdown")):
+        logger.warning("AI grade response missing fields, falling back")
+        return _fallback_grade(role, question, answer, reason="bad_schema")
+    if not isinstance(result["points"], int) or not 0 <= result["points"] <= 3:
+        logger.warning("AI returned out-of-range points: %r", result.get("points"))
+        return _fallback_grade(role, question, answer, reason="bad_points")
+
+    breaker.record_success()
+    result["_meta"] = call_meta
+    logger.info(
+        "AI graded role=%s points=%s tokens=%s/%s latency=%sms",
+        role, result["points"], call_meta["tokens_in"],
+        call_meta["tokens_out"], call_meta["latency_ms"],
+    )
+    return result
+
+
+def _fallback_correct(role, question, answer, meta, feedback, reason="rule_based"):
+    """Nowhere near as good as the model, but it always returns something
+    sensible so the modal never comes up empty."""
     improved = answer.strip()
     changes = []
 
-    if improved and not improved[-1] in '.!?':
-        improved += '.'
-        changes.append({"type": "add", "original": "", "improved": ".", "reason": "Add proper sentence ending"})
+    if improved and improved[-1] not in ".!?":
+        improved += "."
+        changes.append({
+            "type": "add",
+            "original": "",
+            "improved": ".",
+            "reason": "Close the sentence properly",
+        })
 
-    keywords = meta.get("keywords", [])
-    for kw in keywords[:3]:
+    for kw in meta.get("keywords", [])[:3]:
         if kw.lower() not in improved.lower():
-            improved += f" Key concept: {kw}."
-            changes.append({"type": "add", "original": "", "improved": f" Key concept: {kw}.", "reason": f"Include missing keyword: {kw}"})
+            addition = f" Key concept: {kw}."
+            improved += addition
+            changes.append({
+                "type": "add",
+                "original": "",
+                "improved": addition,
+                "reason": f"Include the missing keyword: {kw}",
+            })
 
-    transitions = ["First", "Second", "Finally", "However", "In addition"]
-    has_transition = any(t.lower() in improved.lower() for t in transitions)
-    if not has_transition and len(improved.split('.')) > 1:
+    transitions = ["first", "second", "finally", "however", "in addition"]
+    if not any(t in improved.lower() for t in transitions) and len(improved.split(".")) > 1:
+        original_opening = improved[:20]
         improved = "First, " + improved[0].lower() + improved[1:]
-        changes.append({"type": "replace", "original": improved[:6], "improved": "First, ", "reason": "Add structural transition"})
+        changes.append({
+            "type": "replace",
+            "original": original_opening,
+            "improved": "First, " + original_opening[:14],
+            "reason": "Add a structural transition to open the answer",
+        })
 
     if "example" in feedback.lower() and "example" not in improved.lower():
-        improved += " For example, consider a practical scenario to showcase this concept."
-        changes.append({"type": "add", "original": "", "improved": " For example, consider a practical scenario demonstrating this concept.", "reason": "Add concrete example as suggested by feedback"})
+        addition = " For example, consider a practical scenario where this applies."
+        improved += addition
+        changes.append({
+            "type": "add",
+            "original": "",
+            "improved": addition,
+            "reason": "Add a concrete example, as the feedback suggested",
+        })
 
     if " i " in f" {improved.lower()} ":
         improved = improved.replace(" i ", " I ")
-        changes.append({"type": "replace", "original": " i ", "improved": " I ", "reason": "Capitalize first-person pronoun"})
+        changes.append({
+            "type": "replace",
+            "original": " i ",
+            "improved": " I ",
+            "reason": "Capitalise the first-person pronoun",
+        })
 
+    changes = changes[:6]
     return {
         "improved_answer": improved,
-        "changes": changes[:6],
+        "changes": changes,
         "key_improvements": [c["reason"] for c in changes[:4]],
-        "_meta": {"fallback": "rule_based"}
+        "_meta": {"fallback_reason": reason},
     }
 
 
 def ai_correct(role, question, answer, meta, feedback):
-    global fail_count, circuit_open_until
-    start_time = time.time()
-
-    if not AI_ENABLED:
-        return _fallback_correct(role, question, answer, meta, feedback)
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        return _fallback_correct(role, question, answer, meta, feedback)
-
-    # circuit open for corrections too
-    if circuit_open_until > time.time():
-        logger.warning("Circuit breaker open for corrections, falling back")
-        return _fallback_correct(role, question, answer, meta, feedback)
-    if fail_count >= THRESHOLD:
-        circuit_open_until = time.time() + COOLDOWN
+    if not _can_call():
         return _fallback_correct(role, question, answer, meta, feedback)
 
     try:
-        prompt = _mk_correct_prompt(role, question, answer, meta, feedback)
-        client = _get_claude_client()
-
-        resp = client.messages.create(
-            model=AI_MODEL,
-            max_tokens=1024,
-            temperature=0.2,
-            system=CORRECT_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}]
+        result, call_meta = _invoke(
+            CORRECT_SYSTEM_PROMPT,
+            _build_prompt(role, question, answer, meta, feedback=feedback),
         )
-
-        latency_ms = int((time.time() - start_time) * 1000)
-
-        content = _get_text(resp)
-        result = json.loads(content)
-
-        if not all(k in result for k in ("improved_answer", "changes", "key_improvements")):
-            return None
-
-        fail_count = 0
-        circuit_open_until = 0
-
-        result["_meta"] = {
-            "tokens_in": resp.usage.input_tokens,
-            "tokens_out": resp.usage.output_tokens,
-            "latency_ms": latency_ms,
-            "model": AI_MODEL,
-            "prompt_version": os.getenv("PROMPT_VERSION", "v1.0"),
-        }
-
-        logger.info(f"AI corrected: role={role} tokens={resp.usage.input_tokens}/{resp.usage.output_tokens} latency={latency_ms}ms")
-        return result
-
     except Exception as e:
-        latency_ms = int((time.time() - start_time) * 1000)
-        logger.error(f"AI correction failed: {e} (latency={latency_ms}ms)")
-        fail_count += 1
-        error_str = str(e).lower()
-        if "quota" in error_str or "429" in error_str or "rate limit" in error_str:
-            logger.warning("Quota exceeded, falling back to rule-based correction")
-            return _fallback_correct(role, question, answer, meta, feedback)
-        return _fallback_correct(role, question, answer, meta, feedback)
+        breaker.record_failure()
+        logger.error("AI correction failed: %s", e)
+        return _fallback_correct(role, question, answer, meta, feedback, reason="api_error")
+
+    if not all(k in result for k in ("improved_answer", "changes", "key_improvements")):
+        logger.warning("AI correct response missing fields, falling back")
+        return _fallback_correct(role, question, answer, meta, feedback, reason="bad_schema")
+
+    breaker.record_success()
+    result["_meta"] = call_meta
+    logger.info(
+        "AI corrected role=%s tokens=%s/%s latency=%sms",
+        role, call_meta["tokens_in"], call_meta["tokens_out"], call_meta["latency_ms"],
+    )
+    return result

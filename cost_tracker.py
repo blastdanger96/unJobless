@@ -12,6 +12,8 @@ class CostTracker:
     PRICING = {
         "gpt-4o-mini": {"in": 0.00015, "out": 0.00060},
         "gpt-4o": {"in": 0.005, "out": 0.015},
+        "claude-3-5-sonnet-20241022": {"in": 0.003, "out": 0.015},
+        "claude-3-haiku-20240307": {"in": 0.00025, "out": 0.00125},
     }
 
     def __init__(self, storage_path: str = "cost_data.json"):
